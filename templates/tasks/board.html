@@ -1,0 +1,47 @@
+{% extends 'layouts/app.html' %}
+{% load static %}
+
+{% block title %}Tablero · {{ project.name }} · Taskify{% endblock %}
+
+{% block page_title %}{{ project.name }}{% endblock %}
+
+{% block page_content %}
+<div class="space-y-4">
+
+  <div class="flex items-center gap-3">
+    <a href="{% url 'projects:detail' project.pk %}" class="text-sm font-medium text-brand-700 hover:underline">← Detalle del proyecto</a>
+    {% if not can_move %}
+      <span class="rounded-full bg-line px-2.5 py-0.5 text-xs font-semibold">Solo lectura</span>
+    {% endif %}
+  </div>
+
+  <p id="board-error" role="alert"
+     class="hidden rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+    No se pudo mover la tarea. Inténtalo de nuevo.
+  </p>
+
+  <div id="board" data-csrf="{{ csrf_token }}" data-can-move="{{ can_move|yesno:'true,false' }}"
+       class="grid items-start gap-4 md:grid-cols-3">
+    {% for value, label, tasks in columns %}
+      <section class="rounded-xl border border-line bg-surface p-3" aria-label="{{ label }}">
+        <h2 class="flex items-center justify-between px-1 pb-3 font-bold">
+          {{ label }}
+          <span data-count-for="{{ value }}"
+                class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold">{{ tasks|length }}</span>
+        </h2>
+        <ul data-column="{{ value }}" class="min-h-24 space-y-3">
+          {% for task in tasks %}
+            {% include 'tasks/_card.html' %}
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="{% static 'js/board.js' %}"></script>
+{% endblock %}

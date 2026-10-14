@@ -10,6 +10,10 @@
   <div class="flex items-center gap-3">
     <a href="{% url 'projects:list' %}" class="text-sm font-medium text-brand-700 hover:underline">← Proyectos</a>
     {% include 'projects/_status_badge.html' with status=project.status label=project.get_status_display %}
+    <a href="{% url 'tasks:board' project.pk %}"
+       class="ml-auto rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-800">
+      Ver tablero
+    </a>
   </div>
 
   <div class="grid gap-6 lg:grid-cols-3">

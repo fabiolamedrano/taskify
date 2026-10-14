@@ -2,6 +2,11 @@ from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 
+class TaskQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        from projects.models import Project
+        return self.filter(project__in=Project.objects.visible_to(user))
+
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
     color = models.CharField(max_length=7, default='#9C2F52')
@@ -45,6 +50,7 @@ class Task(models.Model):
     tags = models.ManyToManyField(Tag, blank=True, related_name='tasks')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    objects = TaskQuerySet.as_manager()
 
     class Meta:
         ordering = ['-created_at']
