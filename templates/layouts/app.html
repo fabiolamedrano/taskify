@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex min-h-screen">
+
+  <!-- Barra lateral (visible desde pantallas grandes) -->
+  <aside class="hidden w-60 shrink-0 flex-col bg-ink text-white lg:flex">
+    <div class="flex items-center gap-3 px-6 py-6">
+      <span class="h-9 w-9 rounded-lg bg-brand-700"></span>
+      <span class="text-xl font-bold">Taskify</span>
+    </div>
+
+    <nav class="flex-1 space-y-1 px-3">
+      <a href="{% url 'dashboard' %}"
+         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">
+        Dashboard
+      </a>
+      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Proyectos</a>
+      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Mis tareas</a>
+      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Equipos</a>
+      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Registro de tiempo</a>
+      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Notificaciones</a>
+    </nav>
+
+    <div class="border-t border-white/10 px-6 py-4 text-sm">
+      <p class="font-semibold">{{ user.get_full_name|default:user.username }}</p>
+      <p class="text-white/60">{{ user.get_role_display }}</p>
+    </div>
+  </aside>
+
+  <!-- Contenido -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="flex items-center justify-between border-b border-line bg-white px-6 py-4">
+      <h1 class="text-xl font-bold">{% block page_title %}{% endblock %}</h1>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button class="rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">
+          Salir
+        </button>
+      </form>
+    </header>
+
+    <main class="flex-1 p-6">
+      {% block page_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
