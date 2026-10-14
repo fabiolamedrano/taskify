@@ -1,0 +1,61 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}Proyectos · Taskify{% endblock %}
+
+{% block page_title %}Proyectos{% endblock %}
+
+{% block page_content %}
+<div class="space-y-6">
+
+  <form method="get" class="flex flex-wrap gap-3">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar proyecto..."
+           aria-label="Buscar proyecto"
+           class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 sm:w-64">
+    <select name="status" aria-label="Filtrar por estado"
+            class="rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+      <option value="">Todos los estados</option>
+      {% for value, label in statuses %}
+        <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Filtrar</button>
+    {% if q or current_status %}
+      <a href="{% url 'projects:list' %}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Limpiar</a>
+    {% endif %}
+  </form>
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    {% for project in projects %}
+      <a href="{% url 'projects:detail' project.pk %}"
+         class="block rounded-xl border border-line bg-white p-5 transition hover:border-brand-700 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700">
+        <div class="flex items-start justify-between gap-3">
+          <h2 class="font-bold">{{ project.name }}</h2>
+          {% include 'projects/_status_badge.html' with status=project.status label=project.get_status_display %}
+        </div>
+        <p class="mt-1 text-sm text-muted">
+          {% if project.team %}{{ project.team.name }}{% else %}Sin equipo{% endif %}
+          · {{ project.owner.get_full_name|default:project.owner.username }}
+        </p>
+
+        <div class="mt-4 flex justify-between text-sm">
+          <span class="text-muted">{{ project.done_count }} de {{ project.task_count }} tareas</span>
+          <span class="font-semibold">{{ project.progress }}%</span>
+        </div>
+        <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"
+             aria-label="Progreso de {{ project.name }}"
+             aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="h-2 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
+        </div>
+
+        <p class="mt-3 text-xs text-muted">
+          {% if project.due_date %}Vence el {{ project.due_date|date:"j M Y" }}{% else %}Sin fecha límite{% endif %}
+        </p>
+      </a>
+    {% empty %}
+      <p class="col-span-full rounded-xl border border-line bg-white px-5 py-10 text-center text-sm text-muted">
+        No hay proyectos que coincidan.
+      </p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

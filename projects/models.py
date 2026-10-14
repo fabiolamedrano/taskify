@@ -1,6 +1,21 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import F, Q
+from django.db.models import Count, F, Q
+
+class ProjectQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        if user.is_superuser or user.role == user.Role.ADMIN:
+            return self
+        visible_ids = self.model.objects.filter(
+            Q(owner=user) | Q(team__members=user) | Q(tasks__assigned_user=user)
+        ).values('id')
+        return self.filter(id__in=visible_ids)
+
+    def with_task_counts(self):
+        return self.annotate(
+            task_count=Count('tasks'),
+            done_count=Count('tasks', filter=Q(tasks__status='done')),
+        )
 
 class Project(models.Model):
     class Status(models.TextChoices):
@@ -25,6 +40,8 @@ class Project(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    objects = ProjectQuerySet.as_manager()
+
     class Meta:
         ordering = ['-created_at']
         indexes = [models.Index(fields=['status'])]
@@ -43,5 +60,11 @@ class Project(models.Model):
             ),
         ]
 
+    @property
+    def progress(self):
+        if not self.task_count:
+            return 0
+        return round(100 * self.done_count / self.task_count)
+    
     def __str__(self):
         return self.name

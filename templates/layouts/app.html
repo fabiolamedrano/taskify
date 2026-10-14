@@ -21,7 +21,10 @@
          class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">
         Dashboard
       </a>
-      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Proyectos</a>
+      <a href="{% url 'projects:list' %}"
+         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'projects' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">
+        Proyectos
+      </a>
       <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Mis tareas</a>
       <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Equipos</a>
       <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Registro de tiempo</a>

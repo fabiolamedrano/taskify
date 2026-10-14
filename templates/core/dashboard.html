@@ -79,7 +79,7 @@
           {% for project in projects %}
             <li>
               <div class="flex justify-between text-sm">
-                <span class="font-semibold">{{ project.name }}</span>
+                <a href="{% url 'projects:detail' project.pk %}" class="font-semibold hover:text-brand-700">{{ project.name }}</a>
                 <span class="text-muted">{{ project.progress }}%</span>
               </div>
               <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"

@@ -41,25 +41,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             .order_by(F('due_date').asc(nulls_last=True))[:5]
         )
 
-        # Proyectos donde soy dueño, miembro del equipo o tengo tareas asignadas.
-        # Se obtienen primero los ids para que los conteos de abajo
-        # no se vean afectados por esos filtros.
-        project_ids = Project.objects.filter(
-            Q(owner=user) | Q(team__members=user) | Q(tasks__assigned_user=user)
-        ).values('id')
-
-        projects = list(
-            Project.objects.filter(id__in=project_ids)
+        context['projects'] = list(
+            Project.objects.visible_to(user)
             .exclude(status__in=[Project.Status.COMPLETED, Project.Status.CANCELLED])
-            .annotate(
-                total=Count('tasks'),
-                done=Count('tasks', filter=Q(tasks__status=Task.Status.DONE)),
-            )
+            .with_task_counts()
             .order_by('due_date')[:5]
         )
-        for project in projects:
-            project.progress = round(100 * project.done / project.total) if project.total else 0
-        context['projects'] = projects
 
         context['notifications'] = (
             Notification.objects.filter(user=user).select_related('task')[:5]

@@ -1,0 +1,147 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}{{ project.name }} · Taskify{% endblock %}
+
+{% block page_title %}{{ project.name }}{% endblock %}
+
+{% block page_content %}
+<div class="space-y-6">
+
+  <div class="flex items-center gap-3">
+    <a href="{% url 'projects:list' %}" class="text-sm font-medium text-brand-700 hover:underline">← Proyectos</a>
+    {% include 'projects/_status_badge.html' with status=project.status label=project.get_status_display %}
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-3">
+
+    <div class="space-y-6 lg:col-span-2">
+
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Descripción</h2>
+        <p class="mt-2 text-sm">{{ project.description|default:"Sin descripción." }}</p>
+        {% if project.objective %}
+          <h2 class="mt-5 font-bold">Objetivo</h2>
+          <p class="mt-2 text-sm">{{ project.objective }}</p>
+        {% endif %}
+      </section>
+
+      <section class="rounded-xl border border-line bg-white">
+        <h2 class="border-b border-line px-5 py-4 font-bold">Tareas ({{ project.task_count }})</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[640px] text-left text-sm">
+            <thead class="text-xs uppercase text-muted">
+              <tr>
+                <th class="px-5 py-3 font-medium">Tarea</th>
+                <th class="px-5 py-3 font-medium">Estado</th>
+                <th class="px-5 py-3 font-medium">Prioridad</th>
+                <th class="px-5 py-3 font-medium">Responsable</th>
+                <th class="px-5 py-3 font-medium">Vence</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              {% for task in tasks %}
+                <tr>
+                  <td class="px-5 py-3 font-semibold">{{ task.title }}</td>
+                  <td class="px-5 py-3">
+                    <span class="rounded-full px-2 py-0.5 text-xs font-medium
+                      {% if task.status == 'done' %}bg-teal-100 text-teal-800
+                      {% elif task.status == 'doing' %}bg-brand-100 text-brand-800
+                      {% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
+                  </td>
+                  <td class="px-5 py-3">
+                    <span class="inline-flex items-center gap-1.5">
+                      <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
+                      {{ task.get_priority_display }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3">
+                    {% if task.assigned_user %}
+                      {{ task.assigned_user.get_full_name|default:task.assigned_user.username }}
+                    {% elif task.assigned_team %}
+                      {{ task.assigned_team.name }} (equipo)
+                    {% else %}
+                      <span class="text-muted">Sin asignar</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-5 py-3">
+                    {% if task.due_date %}
+                      {% if task.due_date < today and task.status != 'done' %}
+                        <span class="font-semibold text-red-700">{{ task.due_date|date:"j M" }} · vencida</span>
+                      {% else %}
+                        {{ task.due_date|date:"j M" }}
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">Sin fecha</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5" class="px-5 py-8 text-center text-muted">Este proyecto aún no tiene tareas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <aside class="space-y-6">
+
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Resumen</h2>
+        <div class="mt-3 flex justify-between text-sm">
+          <span class="text-muted">{{ project.done_count }} de {{ project.task_count }} tareas</span>
+          <span class="font-semibold">{{ project.progress }}%</span>
+        </div>
+        <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"
+             aria-label="Progreso del proyecto"
+             aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="h-2 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
+        </div>
+
+        <dl class="mt-5 space-y-3 text-sm">
+          <div class="flex justify-between gap-4">
+            <dt class="text-muted">Responsable</dt>
+            <dd class="font-medium">{{ project.owner.get_full_name|default:project.owner.username }}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-muted">Equipo</dt>
+            <dd class="font-medium">{{ project.team.name|default:"Sin equipo" }}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-muted">Inicio</dt>
+            <dd class="font-medium">{{ project.start_date|date:"j M Y"|default:"—" }}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-muted">Fecha límite</dt>
+            <dd class="font-medium">{{ project.due_date|date:"j M Y"|default:"—" }}</dd>
+          </div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-muted">Presupuesto</dt>
+            <dd class="font-medium">{% if project.budget %}${{ project.budget|floatformat:"2g" }}{% else %}—{% endif %}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Horas</h2>
+        <p class="mt-2 text-3xl font-bold">{{ logged_hours|floatformat:"-1" }} h</p>
+        <p class="text-sm text-muted">registradas de {{ estimated_hours|floatformat:"-1" }} h estimadas</p>
+      </section>
+
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Equipo</h2>
+        <ul class="mt-3 space-y-2 text-sm">
+          {% for member in members %}
+            <li class="flex justify-between gap-4">
+              <span class="font-medium">{{ member.get_full_name|default:member.username }}</span>
+              <span class="text-muted">{{ member.get_role_display }}</span>
+            </li>
+          {% empty %}
+            <li class="text-muted">Sin miembros asignados.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}
