@@ -1,10 +1,16 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="flex min-h-screen">
 
-  <!-- Barra lateral (visible desde pantallas grandes) -->
-  <aside class="hidden w-60 shrink-0 flex-col bg-ink text-white lg:flex">
+  <!-- Fondo oscuro del menú en móvil -->
+  <div id="sidebar-overlay"
+       class="pointer-events-none fixed inset-0 z-30 bg-black/50 opacity-0 transition-opacity data-[open=true]:pointer-events-auto data-[open=true]:opacity-100 lg:hidden"></div>
+
+  <!-- Barra lateral: desliza en móvil, fija en pantallas grandes -->
+  <aside id="sidebar"
+         class="fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 -translate-x-full flex-col bg-ink text-white transition-transform data-[open=true]:translate-x-0 lg:static lg:translate-x-0">
     <div class="flex items-center gap-3 px-6 py-6">
       <span class="h-9 w-9 rounded-lg bg-brand-700"></span>
       <span class="text-xl font-bold">Taskify</span>
@@ -31,7 +37,16 @@
   <!-- Contenido -->
   <div class="flex min-w-0 flex-1 flex-col">
     <header class="flex items-center justify-between border-b border-line bg-white px-6 py-4">
-      <h1 class="text-xl font-bold">{% block page_title %}{% endblock %}</h1>
+      <div class="flex items-center gap-3">
+        <button id="sidebar-toggle" type="button"
+                aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"
+                class="rounded-lg border border-line p-2 hover:bg-surface lg:hidden">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <h1 class="text-xl font-bold">{% block page_title %}{% endblock %}</h1>
+      </div>
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button class="rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">
@@ -45,4 +60,8 @@
     </main>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/app.js' %}"></script>
 {% endblock %}
