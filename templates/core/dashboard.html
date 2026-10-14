@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard · Taskify{% endblock %}
+
+{% block content %}
+<main class="p-8">
+  <h1 class="text-2xl font-bold">Hola, {{ user.username }}</h1>
+  <form method="post" action="{% url 'logout' %}" class="mt-4">
+    {% csrf_token %}
+    <button class="rounded-lg border border-line px-3 py-2 text-sm font-medium">Salir</button>
+  </form>
+</main>
+{% endblock %}
