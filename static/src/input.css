@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #FBF4F7;
+  --color-brand-100: #F9EAF1;
+  --color-brand-200: #F4D6E4;
+  --color-brand-300: #EDB4CE;
+  --color-brand-400: #E086AD;
+  --color-brand-500: #D3618F;
+  --color-brand-600: #BF436E;
+  --color-brand-700: #9C2F52;
+  --color-brand-800: #882C48;
+  --color-brand-900: #73283F;
+  --color-brand-950: #451221;
+
+  --color-ink: #2A1D23;
+  --color-surface: #F7F6F7;
+  --color-line: #E5E2E4;
+  --color-muted: #6E6569;
+}
