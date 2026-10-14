@@ -1,0 +1,13 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: taskify_db
+    restart: always
+    env_file: .env
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data_taskify:/var/lib/mysql
+
+volumes:
+  mysql_data_taskify:
