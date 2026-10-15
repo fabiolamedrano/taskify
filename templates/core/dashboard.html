@@ -39,7 +39,7 @@
         {% for task in upcoming_tasks %}
           <li class="flex items-start justify-between gap-4 px-5 py-4">
             <div class="min-w-0">
-              <p class="truncate font-semibold">{{ task.title }}</p>
+              <a href="{% url 'tasks:detail' task.pk %}" class="block truncate font-semibold hover:text-brand-700">{{ task.title }}</a>
               <p class="mt-1 text-sm text-muted">{{ task.project.name }} · {{ task.get_status_display }}</p>
               <div class="mt-2 flex flex-wrap gap-2">
                 {% for tag in task.tags.all %}

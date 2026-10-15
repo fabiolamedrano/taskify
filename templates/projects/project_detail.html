@@ -45,7 +45,9 @@
             <tbody class="divide-y divide-line">
               {% for task in tasks %}
                 <tr>
-                  <td class="px-5 py-3 font-semibold">{{ task.title }}</td>
+                  <td class="px-5 py-3 font-semibold">
+                    <a href="{% url 'tasks:detail' task.pk %}" class="hover:text-brand-700">{{ task.title }}</a>
+                  </td>
                   <td class="px-5 py-3">
                     <span class="rounded-full px-2 py-0.5 text-xs font-medium
                       {% if task.status == 'done' %}bg-teal-100 text-teal-800

@@ -1,6 +1,6 @@
 <li data-task data-move-url="{% url 'tasks:move' task.pk %}"
     class="rounded-lg border border-line bg-white p-3 shadow-sm {% if can_move %}cursor-grab active:cursor-grabbing{% endif %}">
-  <p class="font-semibold">{{ task.title }}</p>
+  <a href="{% url 'tasks:detail' task.pk %}" class="font-semibold hover:text-brand-700">{{ task.title }}</a>
 
   {% if task.tags.all %}
     <div class="mt-2 flex flex-wrap gap-1.5">
