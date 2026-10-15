@@ -1,3 +1,5 @@
+# models/notificacions
+
 from django.conf import settings
 from django.db import models
 
@@ -19,6 +21,8 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'notificación'
+        verbose_name_plural = 'notificaciones'
         ordering = ['-created_at']
         indexes = [models.Index(fields=['user', 'is_read'])]
 

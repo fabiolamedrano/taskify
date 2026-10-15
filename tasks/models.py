@@ -1,3 +1,5 @@
+# models/tasks
+
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
@@ -13,6 +15,8 @@ class Tag(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'etiqueta'
+        verbose_name_plural = 'etiquetas'
         ordering = ['name']
 
     def __str__(self):
@@ -53,6 +57,8 @@ class Task(models.Model):
     objects = TaskQuerySet.as_manager()
 
     class Meta:
+        verbose_name = 'tarea'
+        verbose_name_plural = 'tareas'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['project', 'status']),
@@ -84,6 +90,8 @@ class Subtask(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'subtarea'
+        verbose_name_plural = 'subtareas'
         ordering = ['order', 'id']
 
     def __str__(self):
@@ -102,6 +110,8 @@ class Comment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        verbose_name = 'comentario'
+        verbose_name_plural = 'comentarios'
         ordering = ['created_at']
         indexes = [models.Index(fields=['task', 'created_at'])]
 
@@ -126,6 +136,8 @@ class Attachment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'archivo adjunto'
+        verbose_name_plural = 'archivos adjuntos'
         ordering = ['-created_at']
 
     def __str__(self):
@@ -142,6 +154,8 @@ class TimeLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'registro de tiempo'
+        verbose_name_plural = 'registros de tiempo'
         ordering = ['-date', '-created_at']
         indexes = [
             models.Index(fields=['task', 'date']),

@@ -1,3 +1,5 @@
+# admin/tasks
+
 from django.contrib import admin
 from .models import Tag, Task, Subtask, Comment, Attachment, TimeLog
 

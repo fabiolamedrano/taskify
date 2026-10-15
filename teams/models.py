@@ -1,3 +1,5 @@
+# models/teams
+
 from django.conf import settings
 from django.db import models
 
@@ -14,6 +16,8 @@ class Team(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'equipo'
+        verbose_name_plural = 'equipos'
         ordering = ['name']
 
     def __str__(self):
@@ -26,6 +30,8 @@ class TeamMember(models.Model):
     joined_at = models.DateField(auto_now_add=True)
 
     class Meta:
+        verbose_name = 'miembro de equipo'
+        verbose_name_plural = 'miembros de equipo'
         constraints = [
             models.UniqueConstraint(fields=['user', 'team'], name='teams_unique_team_member'),
         ]
