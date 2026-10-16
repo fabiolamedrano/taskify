@@ -11,6 +11,7 @@ urlpatterns = [
     ),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('projects/', include('projects.urls')),
-    path('', include('tasks.urls')),
+    path('api/', include('api.urls')),
+    path('tasks/', include('tasks.urls')),
     path('', include('core.urls')),
 ]
