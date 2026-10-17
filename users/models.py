@@ -17,3 +17,11 @@ class User(AbstractUser):
         verbose_name = 'usuario'
         verbose_name_plural = 'usuarios'
         ordering = ['username']
+        
+    @property
+    def is_admin(self):
+        return self.is_superuser or self.role == self.Role.ADMIN
+
+    @property
+    def is_client(self):
+        return self.role == self.Role.CLIENT

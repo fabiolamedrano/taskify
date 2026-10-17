@@ -2,6 +2,14 @@
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
+
+class TeamQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        if user.is_admin:
+            return self
+        visible_ids = self.model.objects.filter(Q(members=user) | Q(leader=user)).values('id')
+        return self.filter(id__in=visible_ids)
 
 class Team(models.Model):
     name = models.CharField(max_length=100)
@@ -14,6 +22,8 @@ class Team(models.Model):
         settings.AUTH_USER_MODEL, through='TeamMember', related_name='teams',
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = TeamQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'equipo'

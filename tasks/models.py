@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
+from django.urls import reverse
 
 class TaskQuerySet(models.QuerySet):
     def visible_to(self, user):
@@ -81,6 +82,9 @@ class Task(models.Model):
 
     def __str__(self):
         return self.title
+    
+    def get_absolute_url(self):
+        return reverse('tasks:detail', args=[self.pk])
 
 class Subtask(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='subtasks')

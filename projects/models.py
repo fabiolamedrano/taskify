@@ -3,10 +3,11 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Count, F, Q
+from django.urls import reverse
 
 class ProjectQuerySet(models.QuerySet):
     def visible_to(self, user):
-        if user.is_superuser or user.role == user.Role.ADMIN:
+        if user.is_admin:
             return self
         visible_ids = self.model.objects.filter(
             Q(owner=user) | Q(team__members=user) | Q(tasks__assigned_user=user)
@@ -72,3 +73,6 @@ class Project(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def get_absolute_url(self):
+        return reverse('projects:detail', args=[self.pk])

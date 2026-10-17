@@ -1,3 +1,5 @@
+# serializers.py
+
 from django.contrib.auth import get_user_model, password_validation
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone

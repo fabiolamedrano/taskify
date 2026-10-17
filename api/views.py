@@ -1,3 +1,5 @@
+# views.py
+
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from rest_framework import viewsets
@@ -17,16 +19,6 @@ from .serializers import (
 )
 
 User = get_user_model()
-
-
-def visible_teams(user):
-    queryset = Team.objects.all()
-    if is_admin(user):
-        return queryset
-    return queryset.filter(
-        id__in=Team.objects.filter(Q(members=user) | Q(leader=user)).values('id')
-    )
-
 
 class BaseModelViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, NotClientOrReadOnly, OwnerOrAdminForWrite]
@@ -56,7 +48,7 @@ class TeamViewSet(BaseModelViewSet):
     ordering_fields = ['name', 'created_at']
 
     def get_queryset(self):
-        return visible_teams(self.request.user).select_related('leader').prefetch_related('members')
+        return Team.objects.visible_to(self.request.user).select_related('leader').prefetch_related('members')
 
     def perform_create(self, serializer):
         team = serializer.save(leader=self.request.user)
@@ -72,9 +64,9 @@ class TeamMemberViewSet(BaseModelViewSet):
 
     def get_queryset(self):
         return TeamMember.objects.filter(
-            team__in=visible_teams(self.request.user)
+            team__in=Team.objects.visible_to(self.request.user)
         ).select_related('team', 'user')
-
+    
     def _check_manager(self, team):
         user = self.request.user
         if not (is_admin(user) or team.leader_id == user.pk):

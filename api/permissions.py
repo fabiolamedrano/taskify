@@ -4,7 +4,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 def is_admin(user):
-    return user.is_superuser or user.role == user.Role.ADMIN
+    return user.is_admin
 
 
 class NotClientOrReadOnly(BasePermission):
