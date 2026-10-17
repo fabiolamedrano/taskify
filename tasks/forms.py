@@ -1,20 +1,22 @@
 from django import forms
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
+from core.forms import INPUT
 
-from .models import Attachment, Comment, Subtask, TimeLog
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 
+from core.forms import DateOrderMixin, TailwindFormMixin
+from teams.models import Team
+
+from .models import Attachment, Comment, Subtask, Task, TimeLog
+
+User = get_user_model()
 MAX_UPLOAD_MB = 5
 ALLOWED_EXTENSIONS = [
     'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'txt', 'csv',
     'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip',
 ]
-
-INPUT = (
-    'w-full rounded-lg border border-line bg-white px-3 py-2 text-sm '
-    'focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20'
-)
-
 
 class SubtaskForm(forms.ModelForm):
     class Meta:
@@ -109,3 +111,54 @@ class AttachmentForm(forms.ModelForm):
         if commit:
             attachment.save()
         return attachment
+
+class TaskForm(TailwindFormMixin, DateOrderMixin, forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = [
+            'title', 'description', 'priority', 'status', 'start_date', 'due_date',
+            'estimated_hours', 'assigned_user', 'assigned_team', 'tags',
+        ]
+        labels = {
+            'title': 'Título',
+            'description': 'Descripción',
+            'priority': 'Prioridad',
+            'status': 'Estado',
+            'start_date': 'Fecha de inicio',
+            'due_date': 'Fecha de vencimiento',
+            'estimated_hours': 'Horas estimadas',
+            'assigned_user': 'Responsable',
+            'assigned_team': 'Equipo asignado',
+            'tags': 'Etiquetas',
+        }
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'estimated_hours': forms.NumberInput(attrs={'step': '0.25', 'min': '0'}),
+            'start_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'due_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'tags': forms.CheckboxSelectMultiple,
+        }
+
+    def __init__(self, *args, user, project, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        candidates = Q(pk=project.owner_id)
+        if project.team_id:
+            candidates |= Q(teams=project.team_id)
+        assignable = Q(is_active=True) & candidates
+        if self.instance.assigned_user_id:
+            assignable |= Q(pk=self.instance.assigned_user_id)
+        self.fields['assigned_user'].queryset = User.objects.filter(assignable).distinct()
+        self.fields['assigned_user'].empty_label = 'Sin asignar'
+
+        allowed_teams = Q(pk__in=Team.objects.visible_to(user).values('pk'))
+        if self.instance.assigned_team_id:
+            allowed_teams |= Q(pk=self.instance.assigned_team_id)
+        self.fields['assigned_team'].queryset = Team.objects.filter(allowed_teams)
+        self.fields['assigned_team'].empty_label = 'Sin equipo'
+
+    def clean_estimated_hours(self):
+        hours = self.cleaned_data['estimated_hours']
+        if hours is not None and hours < 0:
+            raise forms.ValidationError('Las horas estimadas no pueden ser negativas.')
+        return hours

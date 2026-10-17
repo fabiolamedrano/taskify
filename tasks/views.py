@@ -8,14 +8,17 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django.views import View
-from django.views.generic import DetailView
+from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
 
+from core.permissions import NotClientMixin, OwnerOrAdminMixin
 from notifications.models import Notification
 from projects.models import Project
 
-from .forms import AttachmentForm, CommentForm, SubtaskForm, TimeLogForm
-from .models import Subtask, Task, TimeLog
+from .forms import AttachmentForm, CommentForm, SubtaskForm, TaskForm, TimeLogForm
+from .models import Attachment, Comment, Subtask, Task, TimeLog
+from .services import notify_assignment
 
 class BoardView(LoginRequiredMixin, DetailView):
     template_name = 'tasks/board.html'
@@ -208,3 +211,122 @@ class AttachmentCreateView(TaskActionView):
         attachment.task = task
         attachment.uploaded_by = self.request.user
         attachment.save()
+
+class TaskFormMixin:
+    form_class = TaskForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update(user=self.request.user, project=self.project)
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['project'] = self.project
+        return context
+
+
+class TaskCreateView(NotClientMixin, TaskFormMixin, CreateView):
+    model = Task
+
+    @cached_property
+    def project(self):
+        return get_object_or_404(
+            Project.objects.visible_to(self.request.user), pk=self.kwargs['project_pk'],
+        )
+
+    def get_initial(self):
+        initial = super().get_initial()
+        status = self.request.GET.get('status')  # lo envía el botón "+" de cada columna
+        if status in Task.Status.values:
+            initial['status'] = status
+        return initial
+
+    def form_valid(self, form):
+        form.instance.project = self.project
+        form.instance.creator = self.request.user
+        response = super().form_valid(form)
+        notify_assignment(self.object, self.request.user)
+        messages.success(self.request, 'Tarea creada.')
+        return response
+
+
+class TaskUpdateView(NotClientMixin, TaskFormMixin, UpdateView):
+    def get_queryset(self):
+        return Task.objects.visible_to(self.request.user).select_related('project')
+
+    @property
+    def project(self):
+        return self.object.project
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        if 'assigned_user' in form.changed_data:
+            notify_assignment(self.object, self.request.user)
+        messages.success(self.request, 'Tarea actualizada.')
+        return response
+
+
+class TaskDeleteView(NotClientMixin, OwnerOrAdminMixin, DeleteView):
+    owner_field = 'creator_id'
+
+    def get_queryset(self):
+        return Task.objects.visible_to(self.request.user).select_related('project')
+
+    def get_success_url(self):
+        return reverse('tasks:board', args=[self.object.project_id])
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Tarea "{self.object.title}" eliminada.')
+        return super().form_valid(form)
+
+
+class ChildDeleteView(LoginRequiredMixin, View):
+    http_method_names = ['post']
+    model = None
+    owner_field = None
+    anchor = ''
+    success_message = ''
+
+    def post(self, request, pk):
+        user = request.user
+        if user.is_client:
+            raise PermissionDenied
+        visible_tasks = Task.objects.visible_to(user)
+        obj = get_object_or_404(self.model.objects.filter(task__in=visible_tasks), pk=pk)
+        if self.owner_field and not (user.is_admin or getattr(obj, self.owner_field) == user.pk):
+            raise PermissionDenied
+
+        task_pk = obj.task_id
+        self.delete_object(obj)
+        messages.success(request, self.success_message)
+        return redirect(f"{reverse('tasks:detail', args=[task_pk])}#{self.anchor}")
+
+    def delete_object(self, obj):
+        obj.delete()
+
+
+class SubtaskDeleteView(ChildDeleteView):
+    model = Subtask
+    anchor = 'subtasks'
+    success_message = 'Subtarea eliminada.'
+
+
+class CommentDeleteView(ChildDeleteView):
+    model = Comment
+    owner_field = 'author_id'
+    anchor = 'comments'
+    success_message = 'Comentario eliminado.'
+
+
+class AttachmentDeleteView(ChildDeleteView):
+    model = Attachment
+    owner_field = 'uploaded_by_id'
+    anchor = 'attachments'
+    success_message = 'Adjunto eliminado.'
+
+    def delete_object(self, obj):
+        file = obj.file
+        obj.delete()
+        if file:
+            file.delete(save=False)

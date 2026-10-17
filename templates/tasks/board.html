@@ -26,8 +26,15 @@
       <section class="rounded-xl border border-line bg-surface p-3" aria-label="{{ label }}">
         <h2 class="flex items-center justify-between px-1 pb-3 font-bold">
           {{ label }}
-          <span data-count-for="{{ value }}"
-                class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold">{{ tasks|length }}</span>
+          <span class="flex items-center gap-2">
+            <span data-count-for="{{ value }}"
+                  class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold">{{ tasks|length }}</span>
+            {% if can_move %}
+              <a href="{% url 'tasks:create' project.pk %}?status={{ value }}"
+                 aria-label="Agregar tarea a {{ label }}"
+                 class="rounded px-1.5 text-lg leading-none text-muted hover:bg-white hover:text-brand-700">+</a>
+            {% endif %}
+          </span>
         </h2>
         <ul data-column="{{ value }}" class="min-h-24 space-y-3">
           {% for task in tasks %}
