@@ -6,7 +6,12 @@
 
 {% block page_content %}
 <div class="space-y-6">
-
+  {% if not user.is_client %}
+    <div class="flex justify-end">
+      <a href="{% url 'projects:create' %}"
+         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">+ Nuevo proyecto</a>
+    </div>
+  {% endif %}
   <form method="get" class="flex flex-wrap gap-3">
     <input type="search" name="q" value="{{ q }}" placeholder="Buscar proyecto..."
            aria-label="Buscar proyecto"

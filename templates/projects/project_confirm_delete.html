@@ -1,0 +1,20 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}Eliminar proyecto · Taskify{% endblock %}
+
+{% block page_title %}Eliminar proyecto{% endblock %}
+
+{% block page_content %}
+<div class="mx-auto max-w-lg rounded-xl border border-line bg-white p-6">
+  <h2 class="text-lg font-bold">¿Eliminar "{{ project.name }}"?</h2>
+  <p class="mt-2 text-sm text-muted">
+    Se eliminarán también sus {{ task_count }} tarea{{ task_count|pluralize }}, con sus subtareas,
+    comentarios, adjuntos y registros de tiempo. Esta acción no se puede deshacer.
+  </p>
+  <form method="post" class="mt-6 flex justify-end gap-3">
+    {% csrf_token %}
+    <a href="{{ project.get_absolute_url }}" class="rounded-lg border border-line px-4 py-2 text-sm font-medium hover:bg-surface">Cancelar</a>
+    <button class="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800">Sí, eliminar</button>
+  </form>
+</div>
+{% endblock %}

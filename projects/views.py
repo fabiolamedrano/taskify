@@ -1,10 +1,14 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import F, Sum
+from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, ListView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
+from core.permissions import NotClientMixin, OwnerOrAdminMixin
 from tasks.models import TimeLog
 
+from .forms import ProjectForm
 from .models import Project
 
 
@@ -65,3 +69,48 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         context['members'] = project.team.members.all() if project.team else []
         context['today'] = timezone.localdate()
         return context
+
+class ProjectFormMixin:
+    form_class = ProjectForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
+
+class ProjectCreateView(NotClientMixin, ProjectFormMixin, CreateView):
+    model = Project
+
+    def form_valid(self, form):
+        form.instance.owner = self.request.user
+        messages.success(self.request, 'Proyecto creado.')
+        return super().form_valid(form)
+
+
+class ProjectUpdateView(NotClientMixin, OwnerOrAdminMixin, ProjectFormMixin, UpdateView):
+    owner_field = 'owner_id'
+
+    def get_queryset(self):
+        return Project.objects.visible_to(self.request.user)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Proyecto actualizado.')
+        return super().form_valid(form)
+
+
+class ProjectDeleteView(NotClientMixin, OwnerOrAdminMixin, DeleteView):
+    owner_field = 'owner_id'
+    success_url = reverse_lazy('projects:list')
+
+    def get_queryset(self):
+        return Project.objects.visible_to(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['task_count'] = self.object.tasks.count()
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Proyecto "{self.object.name}" eliminado.')
+        return super().form_valid(form)
