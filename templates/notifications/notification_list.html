@@ -1,0 +1,59 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}Notificaciones · Taskify{% endblock %}
+
+{% block page_title %}Notificaciones{% endblock %}
+
+{% block page_content %}
+<div class="mx-auto max-w-3xl space-y-4">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex gap-2 text-sm font-medium">
+      <a href="{% url 'notifications:list' %}"
+         class="rounded-lg px-3 py-2 {% if not only_unread %}bg-ink text-white{% else %}border border-line bg-white hover:bg-surface{% endif %}">Todas</a>
+      <a href="{% url 'notifications:list' %}?filter=unread"
+         class="rounded-lg px-3 py-2 {% if only_unread %}bg-ink text-white{% else %}border border-line bg-white hover:bg-surface{% endif %}">
+        Sin leer{% if unread_notifications_count %} ({{ unread_notifications_count }}){% endif %}
+      </a>
+    </div>
+    {% if unread_notifications_count %}
+      <form method="post" action="{% url 'notifications:read_all' %}">
+        {% csrf_token %}
+        <button class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Marcar todas como leídas</button>
+      </form>
+    {% endif %}
+  </div>
+
+  <ul class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+    {% for notification in notifications %}
+      <li class="flex items-start gap-3 border-l-4 px-5 py-4 {% if notification.is_read %}border-l-transparent{% else %}border-l-brand-700{% endif %}">
+        <div class="min-w-0 flex-1">
+          {% if notification.task_id %}
+            <form method="post" action="{% url 'notifications:open' notification.pk %}">
+              {% csrf_token %}
+              <button class="text-left text-sm hover:text-brand-700 {% if not notification.is_read %}font-semibold{% endif %}">
+                {{ notification.message }}
+              </button>
+            </form>
+          {% else %}
+            <p class="text-sm {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-muted">
+            <span class="rounded-full bg-surface px-2 py-0.5 font-medium">{{ notification.get_type_display }}</span>
+            · Hace {{ notification.created_at|timesince }}
+          </p>
+        </div>
+        {% if not notification.is_read %}
+          <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-700" role="img" aria-label="Sin leer"></span>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li class="px-5 py-10 text-center text-sm text-muted">
+        {% if only_unread %}No tienes notificaciones sin leer.{% else %}Todavía no tienes notificaciones.{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% include 'includes/_pagination.html' %}
+</div>
+{% endblock %}
