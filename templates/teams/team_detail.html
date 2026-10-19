@@ -1,0 +1,108 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}{{ team.name }} · Taskify{% endblock %}
+
+{% block page_title %}{{ team.name }}{% endblock %}
+
+{% block page_content %}
+<div class="space-y-6">
+
+  <div class="flex flex-wrap items-center gap-3">
+    <a href="{% url 'teams:list' %}" class="text-sm font-medium text-brand-700 hover:underline">← Equipos</a>
+    {% if can_manage %}
+      <div class="ml-auto flex gap-2">
+        <a href="{% url 'teams:update' team.pk %}"
+           class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Editar</a>
+        <a href="{% url 'teams:delete' team.pk %}"
+           class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-3">
+
+    <div class="space-y-6 lg:col-span-2">
+
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Descripción</h2>
+        <p class="mt-2 text-sm">{{ team.description|default:"Sin descripción." }}</p>
+        <p class="mt-3 text-sm text-muted">
+          Líder: <span class="font-medium text-ink">{{ team.leader.get_full_name|default:team.leader.username|default:"Sin líder" }}</span>
+        </p>
+      </section>
+
+      <section class="rounded-xl border border-line bg-white">
+        <h2 class="border-b border-line px-5 py-4 font-bold">Miembros ({{ memberships|length }})</h2>
+        <ul class="divide-y divide-line">
+          {% for membership in memberships %}
+            <li class="flex items-center gap-3 px-5 py-3">
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">
+                {{ membership.user.username|slice:":2"|upper }}
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold">
+                  {{ membership.user.get_full_name|default:membership.user.username }}
+                  {% if membership.user_id == team.leader_id %}
+                    <span class="ml-1 rounded-full bg-ink px-2 py-0.5 text-xs font-medium text-white">Líder</span>
+                  {% endif %}
+                </p>
+                <p class="text-xs text-muted">
+                  {{ membership.role_in_team|default:"Sin rol definido" }}
+                  · {{ membership.user.get_role_display }}
+                  · desde {{ membership.joined_at|date:"j M Y" }}
+                </p>
+              </div>
+              {% if can_manage and membership.user_id != team.leader_id %}
+                <form method="post" action="{% url 'teams:member_remove' membership.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" aria-label="Quitar a {{ membership.user.username }} del equipo"
+                          class="rounded-lg border border-line px-2.5 py-1.5 text-xs font-medium text-muted hover:bg-surface hover:text-red-700">Quitar</button>
+                </form>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="px-5 py-6 text-center text-sm text-muted">Este equipo todavía no tiene miembros.</li>
+          {% endfor %}
+        </ul>
+
+        {% if can_manage %}
+          <form method="post" action="{% url 'teams:member_add' team.pk %}"
+                class="grid gap-3 border-t border-line p-5 sm:grid-cols-[1fr_1fr_auto]">
+            {% csrf_token %}
+            <div>
+              <label for="{{ member_form.user.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Usuario</label>
+              {{ member_form.user }}
+            </div>
+            <div>
+              <label for="{{ member_form.role_in_team.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Rol en el equipo</label>
+              {{ member_form.role_in_team }}
+            </div>
+            <div class="flex items-end">
+              <button class="w-full rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 sm:w-auto">Agregar</button>
+            </div>
+          </form>
+        {% endif %}
+      </section>
+    </div>
+
+    <aside>
+      <section class="rounded-xl border border-line bg-white">
+        <h2 class="border-b border-line px-5 py-4 font-bold">Proyectos ({{ projects|length }})</h2>
+        <ul class="divide-y divide-line">
+          {% for project in projects %}
+            <li class="px-5 py-3">
+              <div class="flex items-start justify-between gap-3">
+                <a href="{{ project.get_absolute_url }}" class="text-sm font-semibold hover:text-brand-700">{{ project.name }}</a>
+                {% include 'projects/_status_badge.html' with status=project.status label=project.get_status_display %}
+              </div>
+              <p class="mt-1 text-xs text-muted">{{ project.done_count }} de {{ project.task_count }} tareas · {{ project.progress }}%</p>
+            </li>
+          {% empty %}
+            <li class="px-5 py-6 text-center text-sm text-muted">Sin proyectos asignados.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </aside>
+  </div>
+</div>
+{% endblock %}
