@@ -18,3 +18,9 @@ class OwnerOrAdminMixin:
         if not (user.is_admin or getattr(obj, self.owner_field) == user.pk):
             raise PermissionDenied
         return obj
+
+class AdminRequiredMixin(LoginRequiredMixin):
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not request.user.is_admin:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)

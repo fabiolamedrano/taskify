@@ -10,11 +10,14 @@ class TailwindFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
-            if isinstance(field.widget, forms.CheckboxSelectMultiple):
+            widget = field.widget
+            if isinstance(widget, forms.CheckboxSelectMultiple):
                 continue
-            current = field.widget.attrs.get('class', '')
-            field.widget.attrs['class'] = f'{current} {INPUT}'.strip()
-
+            if isinstance(widget, forms.CheckboxInput):
+                css = 'h-4 w-4 rounded border-line text-brand-700 focus:ring-brand-700'
+            else:
+                css = INPUT
+            widget.attrs['class'] = f"{widget.attrs.get('class', '')} {css}".strip
 
 class DateOrderMixin:
     def clean(self):

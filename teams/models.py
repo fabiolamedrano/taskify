@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 class TeamQuerySet(models.QuerySet):
     def visible_to(self, user):
@@ -32,6 +33,12 @@ class Team(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse('teams:detail', args=[self.pk])
+
+    def can_be_managed_by(self, user):
+        return user.is_admin or (self.leader_id == user.pk and not user.is_client)
 
 class TeamMember(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
