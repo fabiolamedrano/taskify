@@ -18,17 +18,24 @@
 
     <nav class="flex-1 space-y-1 px-3">
       <a href="{% url 'dashboard' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">
-        Dashboard
-      </a>
+         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Dashboard</a>
       <a href="{% url 'projects:list' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'projects' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">
-        Proyectos
-      </a>
+         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'projects' or request.resolver_match.app_name == 'tasks' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Proyectos</a>
       <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Mis tareas</a>
-      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Equipos</a>
+      <a href="{% url 'teams:list' %}"
+         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'teams' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Equipos</a>
       <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Registro de tiempo</a>
-      <a href="#" class="block rounded-lg px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10">Notificaciones</a>
+      <a href="{% url 'notifications:list' %}"
+         class="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'notifications' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">
+        Notificaciones
+        {% if unread_notifications_count %}
+          <span class="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-brand-800">{{ unread_notifications_count }}</span>
+        {% endif %}
+      </a>
+      {% if user.is_admin %}
+        <a href="{% url 'users:list' %}"
+           class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'users' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Usuarios</a>
+      {% endif %}
     </nav>
 
     <div class="border-t border-white/10 px-6 py-4 text-sm">
@@ -50,12 +57,22 @@
         </button>
         <h1 class="text-xl font-bold">{% block page_title %}{% endblock %}</h1>
       </div>
-      <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button class="rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">
-          Salir
-        </button>
-      </form>
+      <div class="flex items-center gap-2">
+        <a href="{% url 'notifications:list' %}"
+           aria-label="Notificaciones{% if unread_notifications_count %}, {{ unread_notifications_count }} sin leer{% endif %}"
+           class="relative rounded-lg border border-line p-2 hover:bg-surface">
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+          {% if unread_notifications_count %}
+            <span class="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-700 px-1 text-xs font-bold text-white">{{ unread_notifications_count }}</span>
+          {% endif %}
+        </a>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">Salir</button>
+        </form>
+      </div>
     </header>
 
     <main class="flex-1 p-6">

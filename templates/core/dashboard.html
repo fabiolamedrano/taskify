@@ -97,7 +97,7 @@
       <!-- Notificaciones -->
       <section class="rounded-xl border border-line bg-white">
         <h2 class="flex items-center justify-between border-b border-line px-5 py-4 font-bold">
-          Notificaciones
+          <a href="{% url 'notifications:list' %}" class="hover:text-brand-700">Notificaciones</a>
           {% if unread_count %}
             <span class="rounded-full bg-brand-700 px-2 py-0.5 text-xs font-semibold text-white">{{ unread_count }}</span>
           {% endif %}
