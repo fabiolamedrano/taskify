@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 from django.urls import reverse
+from django.utils import timezone
 
 class TaskQuerySet(models.QuerySet):
     def visible_to(self, user):
@@ -85,6 +86,14 @@ class Task(models.Model):
     
     def get_absolute_url(self):
         return reverse('tasks:detail', args=[self.pk])
+
+    @property
+    def is_overdue(self):
+        return bool(
+            self.due_date
+            and self.status != self.Status.DONE
+            and self.due_date < timezone.localdate()
+        )
 
 class Subtask(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='subtasks')

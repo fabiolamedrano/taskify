@@ -162,3 +162,27 @@ class TaskForm(TailwindFormMixin, DateOrderMixin, forms.ModelForm):
         if hours is not None and hours < 0:
             raise forms.ValidationError('Las horas estimadas no pueden ser negativas.')
         return hours
+
+class QuickTimeLogForm(TimeLogForm):
+    class Meta(TimeLogForm.Meta):
+        fields = ['task', 'date', 'hours', 'description']
+        labels = {
+            'task': 'Tarea',
+            'date': 'Fecha',
+            'hours': 'Horas',
+            'description': 'Descripción',
+        }
+        widgets = {**TimeLogForm.Meta.widgets, 'task': forms.Select(attrs={'class': INPUT})}
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields['task']
+        field.queryset = (
+            Task.objects.visible_to(user)
+            .filter(assigned_user=user)
+            .exclude(status=Task.Status.DONE)
+            .select_related('project')
+            .order_by('project__name', 'title')
+        )
+        field.empty_label = 'Elige una tarea'
+        field.label_from_instance = lambda task: f'{task.project.name} · {task.title}'

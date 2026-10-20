@@ -2,14 +2,18 @@ from django.urls import path
 
 from .views import (
     AttachmentCreateView, AttachmentDeleteView, BoardView, CommentCreateView,
-    CommentDeleteView, SubtaskCreateView, SubtaskDeleteView, SubtaskToggleView,
-    TaskCreateView, TaskDeleteView, TaskDetailView, TaskMoveView, TaskUpdateView,
-    TimeLogCreateView,
+    CommentDeleteView, MyTasksView, MyTimeCreateView, MyTimeDeleteView, MyTimeView,
+    SubtaskCreateView, SubtaskDeleteView, SubtaskToggleView, TaskCreateView,
+    TaskDeleteView, TaskDetailView, TaskMoveView, TaskUpdateView, TimeLogCreateView,
 )
 
 app_name = 'tasks'
 
 urlpatterns = [
+    path('my-tasks/', MyTasksView.as_view(), name='mine'),
+    path('time/', MyTimeView.as_view(), name='my_time'),
+    path('time/add/', MyTimeCreateView.as_view(), name='my_time_add'),
+    path('time/<int:pk>/delete/', MyTimeDeleteView.as_view(), name='my_time_delete'),
     path('projects/<int:project_pk>/board/', BoardView.as_view(), name='board'),
     path('projects/<int:project_pk>/tasks/new/', TaskCreateView.as_view(), name='create'),
     path('tasks/<int:pk>/', TaskDetailView.as_view(), name='detail'),

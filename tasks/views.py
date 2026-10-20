@@ -1,4 +1,9 @@
 import json
+from collections import defaultdict
+from datetime import date, timedelta
+from decimal import Decimal
+from itertools import groupby
+from operator import attrgetter
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -10,13 +15,13 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django.views import View
-from django.views.generic import CreateView, DeleteView, DetailView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
 
 from core.permissions import NotClientMixin, OwnerOrAdminMixin
 from notifications.models import Notification
 from projects.models import Project
 
-from .forms import AttachmentForm, CommentForm, SubtaskForm, TaskForm, TimeLogForm
+from .forms import AttachmentForm, CommentForm, QuickTimeLogForm, SubtaskForm, TaskForm, TimeLogForm
 from .models import Attachment, Comment, Subtask, Task, TimeLog
 from .services import notify_assignment
 
@@ -43,7 +48,6 @@ class BoardView(LoginRequiredMixin, DetailView):
             .order_by(F('due_date').asc(nulls_last=True))
         )
 
-        # Una sola consulta; las tareas se reparten por estado en Python
         by_status = {value: [] for value, _ in Task.Status.choices}
         for task in tasks:
             by_status[task.status].append(task)
@@ -116,8 +120,6 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
 
 
 class TaskActionView(LoginRequiredMixin, View):
-    """Base para los formularios de la página de detalle.
-    Valida, guarda y vuelve al detalle (patrón POST → redirect)."""
     http_method_names = ['post']
     form_class = None
     anchor = ''
@@ -237,7 +239,7 @@ class TaskCreateView(NotClientMixin, TaskFormMixin, CreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        status = self.request.GET.get('status')  # lo envía el botón "+" de cada columna
+        status = self.request.GET.get('status')
         if status in Task.Status.values:
             initial['status'] = status
         return initial
@@ -330,3 +332,169 @@ class AttachmentDeleteView(ChildDeleteView):
         obj.delete()
         if file:
             file.delete(save=False)
+
+class MyTasksView(LoginRequiredMixin, TemplateView):
+    template_name = 'tasks/my_tasks.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        today = timezone.localdate()
+        params = self.request.GET
+
+        tasks = Task.objects.filter(assigned_user=user)
+
+        status = params.get('status', '')
+        if status == 'all':
+            pass
+        elif status in Task.Status.values:
+            tasks = tasks.filter(status=status)
+        else:
+            status = ''
+            tasks = tasks.exclude(status=Task.Status.DONE)
+
+        priority = params.get('priority', '')
+        if priority in Task.Priority.values:
+            tasks = tasks.filter(priority=priority)
+        else:
+            priority = ''
+
+        search = params.get('q', '').strip()
+        if search:
+            tasks = tasks.filter(title__icontains=search)
+
+        tasks = list(
+            tasks.select_related('project')
+            .prefetch_related('tags')
+            .order_by('project__name', F('due_date').asc(nulls_last=True), 'id')
+        )
+
+        groups = []
+        for _, items in groupby(tasks, key=attrgetter('project_id')):
+            items = list(items)
+            groups.append({'project': items[0].project, 'tasks': items})
+
+        week_end = today + timedelta(days=7)
+        context.update(
+            groups=groups,
+            total=len(tasks),
+            overdue_count=sum(1 for task in tasks if task.is_overdue),
+            due_week_count=sum(
+                1 for task in tasks
+                if task.status != Task.Status.DONE and task.due_date and today <= task.due_date <= week_end
+            ),
+            statuses=Task.Status.choices,
+            priorities=Task.Priority.choices,
+            current_status=status,
+            current_priority=priority,
+            q=search,
+        )
+        return context
+
+
+def my_time_url(day):
+    return f"{reverse('tasks:my_time')}?week={day.isoformat()}"
+
+
+class MyTimeView(LoginRequiredMixin, TemplateView):
+    template_name = 'tasks/my_time.html'
+    MIN_BAR = 4
+
+    def get_week_start(self, today):
+        try:
+            day = date.fromisoformat(self.request.GET.get('week', ''))
+        except ValueError:
+            day = today
+        if not 2000 <= day.year <= 2100:
+            day = today
+        return day - timedelta(days=day.weekday())
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        today = timezone.localdate()
+        start = self.get_week_start(today)
+        end = start + timedelta(days=6)
+
+        logs = list(
+            TimeLog.objects.filter(
+                user=user,
+                date__range=(start, end),
+                task__in=Task.objects.visible_to(user),
+            )
+            .select_related('task__project')
+            .order_by('-date', '-created_at')
+        )
+
+        per_day = defaultdict(Decimal)
+        per_project = defaultdict(Decimal)
+        for log in logs:
+            per_day[log.date] += log.hours
+            per_project[log.task.project] += log.hours
+
+        week_total = sum(per_day.values(), Decimal('0'))
+        scale = max(max(per_day.values(), default=Decimal('0')), Decimal('8'))
+
+        days = []
+        for offset in range(7):
+            day = start + timedelta(days=offset)
+            total = per_day.get(day, Decimal('0'))
+            percent = max(self.MIN_BAR, round(100 * total / scale)) if total else 0
+            days.append({'date': day, 'total': total, 'percent': percent, 'is_today': day == today})
+
+        projects = [
+            {'project': project, 'hours': hours, 'percent': round(100 * hours / week_total)}
+            for project, hours in sorted(per_project.items(), key=lambda item: item[1], reverse=True)
+        ]
+
+        current_start = today - timedelta(days=today.weekday())
+        context.update(
+            logs=logs,
+            days=days,
+            projects=projects,
+            week_total=week_total,
+            days_logged=len(per_day),
+            week_start=start,
+            week_end=end,
+            prev_week=(start - timedelta(days=7)).isoformat(),
+            next_week=(start + timedelta(days=7)).isoformat() if start < current_start else None,
+            is_current_week=start == current_start,
+        )
+
+        if not user.is_client:
+            form = QuickTimeLogForm(user=user, initial={'date': today})
+            context['quick_form'] = form
+            context['open_tasks_count'] = form.fields['task'].queryset.count()
+        return context
+
+
+class MyTimeCreateView(NotClientMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request):
+        form = QuickTimeLogForm(request.POST, user=request.user)
+        if form.is_valid():
+            log = form.save(commit=False)
+            log.user = request.user
+            log.save()
+            messages.success(request, 'Tiempo registrado.')
+            return redirect(my_time_url(log.date))
+
+        errors = [error for field_errors in form.errors.values() for error in field_errors]
+        messages.error(request, ' '.join(errors))
+        return redirect('tasks:my_time')
+
+
+class MyTimeDeleteView(NotClientMixin, View):
+    http_method_names = ['post']
+
+    def post(self, request, pk):
+        visible_tasks = Task.objects.visible_to(request.user)
+        log = get_object_or_404(TimeLog.objects.filter(task__in=visible_tasks), pk=pk)
+        if not (request.user.is_admin or log.user_id == request.user.pk):
+            raise PermissionDenied
+
+        day = log.date
+        log.delete()
+        messages.success(request, 'Registro eliminado.')
+        return redirect(my_time_url(day))
