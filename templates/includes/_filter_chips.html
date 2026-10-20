@@ -1,0 +1,9 @@
+<div>
+  <p class="mb-1.5 text-xs font-medium text-muted">{{ label }}</p>
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar por {{ label|lower }}">
+    {% for option in options %}
+      <a href="{{ option.url }}" {% if option.active %}aria-current="true"{% endif %}
+         class="rounded-full px-3.5 py-1.5 text-sm font-medium {% if option.active %}bg-ink text-white{% else %}border border-line bg-white hover:bg-surface{% endif %}">{{ option.label }}</a>
+    {% endfor %}
+  </div>
+</div>

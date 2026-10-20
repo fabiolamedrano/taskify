@@ -3,6 +3,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from core.mixins import QueryStringMixin
 from tasks.models import Task
@@ -44,4 +45,10 @@ class NotificationMarkAllReadView(LoginRequiredMixin, View):
     def post(self, request):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         messages.success(request, 'Todas las notificaciones quedaron como leídas.')
+
+        next_url = request.POST.get('next', '')
+        if url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
         return redirect('notifications:list')

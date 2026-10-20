@@ -13,21 +13,17 @@
     </div>
   {% endif %}
   <form method="get" class="flex flex-wrap gap-3">
+    {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
     <input type="search" name="q" value="{{ q }}" placeholder="Buscar proyecto..."
            aria-label="Buscar proyecto"
            class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 sm:w-64">
-    <select name="status" aria-label="Filtrar por estado"
-            class="rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-      <option value="">Todos los estados</option>
-      {% for value, label in statuses %}
-        <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Filtrar</button>
+    <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Buscar</button>
     {% if q or current_status %}
       <a href="{% url 'projects:list' %}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Limpiar</a>
     {% endif %}
   </form>
+
+  {% include 'includes/_filter_chips.html' with options=status_options label='Estado' %}
 
   <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     {% for project in projects %}

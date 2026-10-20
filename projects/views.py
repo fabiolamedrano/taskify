@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.permissions import NotClientMixin, OwnerOrAdminMixin
+from core.mixins import filter_options
 from tasks.models import TimeLog
 
 from .forms import ProjectForm
@@ -32,8 +33,12 @@ class ProjectListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['statuses'] = Project.Status.choices
-        context['current_status'] = self.request.GET.get('status', '')
+        status = self.request.GET.get('status', '')
+        status = status if status in Project.Status.values else ''
+        context['status_options'] = filter_options(
+            self.request, 'status', Project.Status.choices, status, all_label='Todos',
+        )
+        context['current_status'] = status
         context['q'] = self.request.GET.get('q', '').strip()
         return context
 

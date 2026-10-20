@@ -100,21 +100,40 @@
       <!-- Notificaciones -->
       <section class="rounded-xl border border-line bg-white">
         <h2 class="flex items-center justify-between border-b border-line px-5 py-4 font-bold">
-          <a href="{% url 'notifications:list' %}" class="hover:text-brand-700">Notificaciones</a>
+          Notificaciones
           {% if unread_count %}
             <span class="rounded-full bg-brand-700 px-2 py-0.5 text-xs font-semibold text-white">{{ unread_count }}</span>
           {% endif %}
         </h2>
         <ul class="divide-y divide-line">
           {% for notification in notifications %}
-            <li class="px-5 py-3">
-              <p class="text-sm {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</p>
-              <p class="text-xs text-muted">Hace {{ notification.created_at|timesince }}</p>
+            <li class="border-l-4 px-5 py-3 {% if notification.is_read %}border-l-transparent{% else %}border-l-brand-700{% endif %}">
+              {% if notification.task_id %}
+                <form method="post" action="{% url 'notifications:open' notification.pk %}">
+                  {% csrf_token %}
+                  <button class="text-left text-sm hover:text-brand-700 {% if not notification.is_read %}font-semibold{% endif %}">
+                    {{ notification.message }}
+                  </button>
+                </form>
+              {% else %}
+                <p class="text-sm {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</p>
+              {% endif %}
+              <p class="mt-0.5 text-xs text-muted">Hace {{ notification.created_at|timesince }}</p>
             </li>
           {% empty %}
             <li class="px-5 py-6 text-center text-sm text-muted">Sin notificaciones.</li>
           {% endfor %}
         </ul>
+        <div class="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm">
+          <a href="{% url 'notifications:list' %}" class="font-medium text-brand-700 hover:underline">Ver todas</a>
+          {% if unread_count %}
+            <form method="post" action="{% url 'notifications:read_all' %}">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'dashboard' %}">
+              <button class="font-medium text-muted hover:text-ink">Marcar todas como leídas</button>
+            </form>
+          {% endif %}
+        </div>
       </section>
     </div>
   </div>

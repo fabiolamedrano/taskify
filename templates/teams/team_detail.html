@@ -21,7 +21,7 @@
 
   <div class="grid gap-6 lg:grid-cols-3">
 
-    <div class="space-y-6 lg:col-span-2">
+    <div class="min-w-0 space-y-6 lg:col-span-2">
 
       <section class="rounded-xl border border-line bg-white p-5">
         <h2 class="font-bold">Descripción</h2>
@@ -69,11 +69,11 @@
           <form method="post" action="{% url 'teams:member_add' team.pk %}"
                 class="grid gap-3 border-t border-line p-5 sm:grid-cols-[1fr_1fr_auto]">
             {% csrf_token %}
-            <div>
+            <div class="min-w-0">
               <label for="{{ member_form.user.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Usuario</label>
-              {{ member_form.user }}
+              {{ member_form.user }} 
             </div>
-            <div>
+            <div class="min-w-0">
               <label for="{{ member_form.role_in_team.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Rol en el equipo</label>
               {{ member_form.role_in_team }}
             </div>
@@ -85,7 +85,7 @@
       </section>
     </div>
 
-    <aside>
+    <aside class="min-w-0">
       <section class="rounded-xl border border-line bg-white">
         <h2 class="border-b border-line px-5 py-4 font-bold">Proyectos ({{ projects|length }})</h2>
         <ul class="divide-y divide-line">

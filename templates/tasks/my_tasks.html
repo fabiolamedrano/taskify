@@ -7,44 +7,26 @@
 {% block page_content %}
 <div class="space-y-6">
 
-  <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-3">
-    <div class="rounded-xl border border-l-4 border-line border-l-ink bg-white p-5">
-      <p class="text-sm text-muted">Tareas en la lista</p>
-      <p class="mt-2 text-3xl font-bold">{{ total }}</p>
-    </div>
-    <div class="rounded-xl border border-l-4 border-line border-l-amber-500 bg-white p-5">
-      <p class="text-sm text-muted">Vencen esta semana</p>
-      <p class="mt-2 text-3xl font-bold">{{ due_week_count }}</p>
-    </div>
-    <div class="rounded-xl border border-l-4 border-line border-l-red-600 bg-white p-5">
-      <p class="text-sm text-muted">Vencidas</p>
-      <p class="mt-2 text-3xl font-bold">{{ overdue_count }}</p>
-    </div>
+  <section aria-label="Resumen" class="flex flex-wrap gap-3">
+    {% include 'includes/_stat_tile.html' with label='En la lista' value=total accent='border-l-ink' %}
+    {% include 'includes/_stat_tile.html' with label='Vencen esta semana' value=due_week_count accent='border-l-amber-500' %}
+    {% include 'includes/_stat_tile.html' with label='Vencidas' value=overdue_count accent='border-l-red-600' %}
   </section>
 
-  <form method="get" class="flex flex-wrap gap-3">
-    <input type="search" name="q" value="{{ q }}" placeholder="Buscar tarea..." aria-label="Buscar tarea"
-           class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 sm:w-60">
-    <select name="status" aria-label="Filtrar por estado"
-            class="rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-      <option value="" {% if not current_status %}selected{% endif %}>Pendientes</option>
-      {% for value, label in statuses %}
-        <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-      <option value="all" {% if current_status == 'all' %}selected{% endif %}>Todas</option>
-    </select>
-    <select name="priority" aria-label="Filtrar por prioridad"
-            class="rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-      <option value="">Todas las prioridades</option>
-      {% for value, label in priorities %}
-        <option value="{{ value }}" {% if value == current_priority %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Filtrar</button>
-    {% if q or current_status or current_priority %}
-      <a href="{% url 'tasks:mine' %}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Limpiar</a>
-    {% endif %}
-  </form>
+  <div class="space-y-4">
+    <form method="get" class="flex flex-wrap gap-3">
+      {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+      {% if current_priority %}<input type="hidden" name="priority" value="{{ current_priority }}">{% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="Buscar tarea..." aria-label="Buscar tarea"
+             class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 sm:w-60">
+      <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Buscar</button>
+      {% if q or current_status or current_priority %}
+        <a href="{% url 'tasks:mine' %}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Limpiar</a>
+      {% endif %}
+    </form>
+    {% include 'includes/_filter_chips.html' with options=status_options label='Estado' %}
+    {% include 'includes/_filter_chips.html' with options=priority_options label='Prioridad' %}
+  </div>
 
   {% for group in groups %}
     <section class="rounded-xl border border-line bg-white">

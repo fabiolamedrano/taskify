@@ -18,6 +18,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
 
 from core.permissions import NotClientMixin, OwnerOrAdminMixin
+from core.mixins import filter_options
 from notifications.models import Notification
 from projects.models import Project
 
@@ -383,8 +384,13 @@ class MyTasksView(LoginRequiredMixin, TemplateView):
                 1 for task in tasks
                 if task.status != Task.Status.DONE and task.due_date and today <= task.due_date <= week_end
             ),
-            statuses=Task.Status.choices,
-            priorities=Task.Priority.choices,
+            status_options=filter_options(
+                self.request, 'status', [*Task.Status.choices, ('all', 'Todas')],
+                status, all_label='Pendientes',
+            ),
+            priority_options=filter_options(
+                self.request, 'priority', Task.Priority.choices, priority, all_label='Todas',
+            ),
             current_status=status,
             current_priority=priority,
             q=search,
