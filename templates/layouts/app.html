@@ -2,16 +2,15 @@
 {% load static %}
 
 {% block content %}
-<div class="flex min-h-screen">
+<div class="flex min-h-screen w-full bg-gray-50">
 
   <!-- Fondo oscuro del menú en móvil -->
   <div id="sidebar-overlay"
        class="pointer-events-none fixed inset-0 z-30 bg-black/50 opacity-0 transition-opacity data-[open=true]:pointer-events-auto data-[open=true]:opacity-100 lg:hidden"></div>
 
-  <!-- Barra lateral: desliza en móvil, fija en pantallas grandes con móvil primero -->
+  <!-- Barra lateral: congelada en su lugar en escritorio -->
   <aside id="sidebar"
-         class="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-ink text-white transition-transform duration-300 -translate-x-full data-[open=true]:translate-x-0 lg:static lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:transition-none">
-
+         class="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-ink text-white -translate-x-full transition-transform duration-300 data-[open=true]:translate-x-0 lg:translate-x-0 lg:transition-none">
     <div class="flex items-center gap-3 px-6 py-6"> 
       <span class="h-9 w-9 rounded-lg bg-brand-700"></span>
       <span class="text-xl font-bold">Taskify</span>
@@ -48,7 +47,8 @@
   </aside>
 
   <!-- Contenido -->
-  <div class="flex min-w-0 flex-1 flex-col">
+  <div class="flex min-w-0 flex-1 flex-col lg:ml-60">
+
     <header class="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-6 py-4">
       <div class="flex items-center gap-3">
         <button id="sidebar-toggle" type="button"
