@@ -34,7 +34,10 @@
 
     <!-- Próximas tareas -->
     <section class="rounded-xl border border-line bg-white lg:col-span-2">
-      <h2 class="border-b border-line px-5 py-4 font-bold">Mis próximas tareas</h2>
+      <h2 class="flex items-center justify-between border-b border-line px-5 py-4 font-bold">
+        Mis próximas tareas
+        <a href="{% url 'tasks:mine' %}" class="text-sm font-medium text-brand-700 hover:underline">Ver todas</a>
+      </h2>
       <ul class="divide-y divide-line">
         {% for task in upcoming_tasks %}
           <li class="flex items-start justify-between gap-4 px-5 py-4">

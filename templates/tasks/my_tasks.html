@@ -1,0 +1,94 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}Mis tareas · Taskify{% endblock %}
+
+{% block page_title %}Mis tareas{% endblock %}
+
+{% block page_content %}
+<div class="space-y-6">
+
+  <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-3">
+    <div class="rounded-xl border border-l-4 border-line border-l-ink bg-white p-5">
+      <p class="text-sm text-muted">Tareas en la lista</p>
+      <p class="mt-2 text-3xl font-bold">{{ total }}</p>
+    </div>
+    <div class="rounded-xl border border-l-4 border-line border-l-amber-500 bg-white p-5">
+      <p class="text-sm text-muted">Vencen esta semana</p>
+      <p class="mt-2 text-3xl font-bold">{{ due_week_count }}</p>
+    </div>
+    <div class="rounded-xl border border-l-4 border-line border-l-red-600 bg-white p-5">
+      <p class="text-sm text-muted">Vencidas</p>
+      <p class="mt-2 text-3xl font-bold">{{ overdue_count }}</p>
+    </div>
+  </section>
+
+  <form method="get" class="flex flex-wrap gap-3">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar tarea..." aria-label="Buscar tarea"
+           class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 sm:w-60">
+    <select name="status" aria-label="Filtrar por estado"
+            class="rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+      <option value="" {% if not current_status %}selected{% endif %}>Pendientes</option>
+      {% for value, label in statuses %}
+        <option value="{{ value }}" {% if value == current_status %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+      <option value="all" {% if current_status == 'all' %}selected{% endif %}>Todas</option>
+    </select>
+    <select name="priority" aria-label="Filtrar por prioridad"
+            class="rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+      <option value="">Todas las prioridades</option>
+      {% for value, label in priorities %}
+        <option value="{{ value }}" {% if value == current_priority %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Filtrar</button>
+    {% if q or current_status or current_priority %}
+      <a href="{% url 'tasks:mine' %}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Limpiar</a>
+    {% endif %}
+  </form>
+
+  {% for group in groups %}
+    <section class="rounded-xl border border-line bg-white">
+      <h2 class="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
+        <a href="{{ group.project.get_absolute_url }}" class="font-bold hover:text-brand-700">{{ group.project.name }}</a>
+        <span class="shrink-0 text-sm font-normal text-muted">{{ group.tasks|length }} tarea{{ group.tasks|length|pluralize }}</span>
+      </h2>
+      <ul class="divide-y divide-line">
+        {% for task in group.tasks %}
+          <li class="flex items-start justify-between gap-4 px-5 py-4">
+            <div class="min-w-0">
+              <a href="{{ task.get_absolute_url }}" class="block truncate font-semibold hover:text-brand-700">{{ task.title }}</a>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <span class="rounded-full px-2 py-0.5 text-xs font-medium
+                  {% if task.status == 'done' %}bg-teal-100 text-teal-800
+                  {% elif task.status == 'doing' %}bg-brand-100 text-brand-800
+                  {% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
+                {% for tag in task.tags.all %}
+                  <span class="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                        style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="shrink-0 text-right text-sm">
+              {% if task.is_overdue %}
+                <p class="font-semibold text-red-700">Vencida · {{ task.due_date|date:"j M" }}</p>
+              {% elif task.due_date %}
+                <p class="text-muted">{{ task.due_date|date:"j M" }}</p>
+              {% else %}
+                <p class="text-muted">Sin fecha</p>
+              {% endif %}
+              <p class="mt-1 flex items-center justify-end gap-1.5 text-xs text-muted">
+                <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
+                {{ task.get_priority_display }}
+              </p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% empty %}
+    <p class="rounded-xl border border-line bg-white px-5 py-10 text-center text-sm text-muted">
+      {% if q or current_status or current_priority %}No hay tareas que coincidan con los filtros.{% else %}No tienes tareas pendientes. ¡Buen trabajo!{% endif %}
+    </p>
+  {% endfor %}
+</div>
+{% endblock %}

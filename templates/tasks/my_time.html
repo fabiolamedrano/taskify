@@ -1,0 +1,168 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}Registro de tiempo · Taskify{% endblock %}
+
+{% block page_title %}Registro de tiempo{% endblock %}
+
+{% block page_content %}
+<div class="space-y-6">
+
+  <!-- Navegación entre semanas -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <a href="?week={{ prev_week }}" aria-label="Semana anterior"
+         class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">←</a>
+      <p class="min-w-44 text-center text-sm font-semibold">{{ week_start|date:"j M" }} – {{ week_end|date:"j M Y" }}</p>
+      {% if next_week %}
+        <a href="?week={{ next_week }}" aria-label="Semana siguiente"
+           class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">→</a>
+      {% else %}
+        <span aria-hidden="true" class="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted">→</span>
+      {% endif %}
+    </div>
+    {% if not is_current_week %}
+      <a href="{% url 'tasks:my_time' %}" class="text-sm font-medium text-brand-700 hover:underline">Ir a esta semana</a>
+    {% endif %}
+  </div>
+
+  <!-- Resumen -->
+  <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-3">
+    <div class="rounded-xl border border-l-4 border-line border-l-brand-700 bg-white p-5">
+      <p class="text-sm text-muted">Total de la semana</p>
+      <p class="mt-2 text-3xl font-bold">{{ week_total|floatformat:"-2" }} h</p>
+    </div>
+    <div class="rounded-xl border border-l-4 border-line border-l-teal-600 bg-white p-5">
+      <p class="text-sm text-muted">Días con registro</p>
+      <p class="mt-2 text-3xl font-bold">{{ days_logged }} <span class="text-lg font-normal text-muted">de 7</span></p>
+    </div>
+    <div class="rounded-xl border border-l-4 border-line border-l-ink bg-white p-5">
+      <p class="text-sm text-muted">Proyectos</p>
+      <p class="mt-2 text-3xl font-bold">{{ projects|length }}</p>
+    </div>
+  </section>
+
+  <div class="grid gap-6 lg:grid-cols-3">
+
+    <div class="space-y-6 lg:col-span-2">
+
+      <!-- Gráfica de barras por día -->
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Horas por día</h2>
+        <div class="mt-5 grid grid-cols-7 gap-2 sm:gap-4">
+          {% for day in days %}
+            <div class="flex flex-col items-center gap-1">
+              <span class="h-4 text-xs font-semibold">{% if day.total %}{{ day.total|floatformat:"-2" }}{% endif %}</span>
+              <div class="flex h-40 w-full items-end border-b border-line">
+                <div class="w-full rounded-t-md {% if day.is_today %}bg-brand-700{% else %}bg-ink/70{% endif %}"
+                     style="height: {{ day.percent }}%"
+                     role="img" aria-label="{{ day.date|date:'l j' }}: {{ day.total|floatformat:'-2' }} horas"></div>
+              </div>
+              <span class="text-xs {% if day.is_today %}font-bold{% else %}text-muted{% endif %}">{{ day.date|date:"D j" }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- Por proyecto -->
+      <section class="rounded-xl border border-line bg-white p-5">
+        <h2 class="font-bold">Por proyecto</h2>
+        <ul class="mt-4 space-y-4">
+          {% for item in projects %}
+            <li>
+              <div class="flex justify-between gap-3 text-sm">
+                <a href="{{ item.project.get_absolute_url }}" class="font-semibold hover:text-brand-700">{{ item.project.name }}</a>
+                <span class="text-muted">{{ item.hours|floatformat:"-2" }} h · {{ item.percent }}%</span>
+              </div>
+              <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"
+                   aria-label="Horas en {{ item.project.name }}"
+                   aria-valuenow="{{ item.percent }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="h-2 rounded-full bg-brand-700" style="width: {{ item.percent }}%"></div>
+              </div>
+            </li>
+          {% empty %}
+            <li class="text-sm text-muted">No hay horas registradas esta semana.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+
+    <!-- Registro rápido -->
+    {% if quick_form %}
+      <aside>
+        <section class="rounded-xl border border-line bg-white p-5">
+          <h2 class="font-bold">Registrar tiempo</h2>
+          {% if open_tasks_count %}
+            <form method="post" action="{% url 'tasks:my_time_add' %}" class="mt-4 space-y-3">
+              {% csrf_token %}
+              <div>
+                <label for="{{ quick_form.task.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Tarea</label>
+                {{ quick_form.task }}
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="{{ quick_form.date.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Fecha</label>
+                  {{ quick_form.date }}
+                </div>
+                <div>
+                  <label for="{{ quick_form.hours.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Horas</label>
+                  {{ quick_form.hours }}
+                </div>
+              </div>
+              <div>
+                <label for="{{ quick_form.description.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Descripción</label>
+                {{ quick_form.description }}
+              </div>
+              <button class="w-full rounded-lg bg-brand-700 py-2 text-sm font-semibold text-white hover:bg-brand-800">+ Registrar tiempo</button>
+              <p class="text-xs text-muted">Aquí aparecen tus tareas abiertas. Para otras, regístralo desde el detalle de la tarea.</p>
+            </form>
+          {% else %}
+            <p class="mt-3 text-sm text-muted">No tienes tareas abiertas asignadas, así que no hay dónde registrar tiempo.</p>
+          {% endif %}
+        </section>
+      </aside>
+    {% endif %}
+  </div>
+
+  <!-- Historial de la semana -->
+  <section class="rounded-xl border border-line bg-white">
+    <h2 class="border-b border-line px-5 py-4 font-bold">Registros de la semana ({{ logs|length }})</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[640px] text-left text-sm">
+        <thead class="text-xs uppercase text-muted">
+          <tr>
+            <th class="px-5 py-3 font-medium">Fecha</th>
+            <th class="px-5 py-3 font-medium">Tarea</th>
+            <th class="px-5 py-3 font-medium">Descripción</th>
+            <th class="px-5 py-3 text-right font-medium">Horas</th>
+            <th class="px-5 py-3"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          {% for log in logs %}
+            <tr>
+              <td class="whitespace-nowrap px-5 py-3">{{ log.date|date:"D j M" }}</td>
+              <td class="px-5 py-3">
+                <a href="{{ log.task.get_absolute_url }}" class="font-semibold hover:text-brand-700">{{ log.task.title }}</a>
+                <p class="text-xs text-muted">{{ log.task.project.name }}</p>
+              </td>
+              <td class="px-5 py-3 text-muted">{{ log.description|default:"—" }}</td>
+              <td class="px-5 py-3 text-right font-semibold">{{ log.hours|floatformat:"-2" }} h</td>
+              <td class="px-5 py-3 text-right">
+                {% if not user.is_client %}
+                  <form method="post" action="{% url 'tasks:my_time_delete' log.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" aria-label="Eliminar registro de {{ log.hours|floatformat:'-2' }} horas en {{ log.task.title }}"
+                            class="rounded p-1.5 text-muted hover:bg-surface hover:text-red-700">✕</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="px-5 py-8 text-center text-muted">No hay registros en esta semana.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
