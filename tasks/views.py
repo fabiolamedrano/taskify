@@ -57,7 +57,7 @@ class BoardView(LoginRequiredMixin, DetailView):
             (value, label, by_status[value]) for value, label in Task.Status.choices
         ]
         context['statuses'] = Task.Status.choices
-        context['can_move'] = self.request.user.role != self.request.user.Role.CLIENT
+        context['can_move'] = not self.request.user.is_client
         context['today'] = timezone.localdate()
         return context
 
@@ -66,7 +66,7 @@ class TaskMoveView(LoginRequiredMixin, View):
     http_method_names = ['post']
 
     def post(self, request, pk):
-        if request.user.role == request.user.Role.CLIENT:
+        if request.user.is_client:
             return JsonResponse({'error': 'Sin permiso para mover tareas.'}, status=403)
 
         task = get_object_or_404(Task.objects.visible_to(request.user), pk=pk)
@@ -114,7 +114,7 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
             comment_form=CommentForm(),
             time_form=TimeLogForm(initial={'date': today}),
             attachment_form=AttachmentForm(),
-            can_edit=self.request.user.role != self.request.user.Role.CLIENT,
+            can_edit=not self.request.user.is_client,
             today=today,
         )
         return context
@@ -127,7 +127,7 @@ class TaskActionView(LoginRequiredMixin, View):
     success_message = ''
 
     def post(self, request, pk):
-        if request.user.role == request.user.Role.CLIENT:
+        if request.user.is_client:
             raise PermissionDenied
         task = get_object_or_404(Task.objects.visible_to(request.user), pk=pk)
 
@@ -161,7 +161,7 @@ class SubtaskToggleView(LoginRequiredMixin, View):
     http_method_names = ['post']
 
     def post(self, request, pk):
-        if request.user.role == request.user.Role.CLIENT:
+        if request.user.is_client:
             raise PermissionDenied
         visible_tasks = Task.objects.visible_to(request.user)
         subtask = get_object_or_404(Subtask.objects.filter(task__in=visible_tasks), pk=pk)
