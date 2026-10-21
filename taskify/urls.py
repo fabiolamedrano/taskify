@@ -13,6 +13,7 @@ urlpatterns = [
     path('projects/', include('projects.urls')),
     path('teams/', include('teams.urls')),
     path('notifications/', include('notifications.urls')),
+    path('tags/', include('tasks.tag_urls')),
     path('users/', include('users.urls')),
     path('api/', include('api.urls')),
     path('tasks/', include('tasks.urls')),

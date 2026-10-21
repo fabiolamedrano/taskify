@@ -12,7 +12,7 @@ from django.utils import timezone
 from core.factories import TempMediaMixin, WorldMixin, make_task
 from notifications.models import Notification
 
-from .models import Attachment, Comment, Subtask, Task, TimeLog
+from .models import Attachment, Comment, Subtask, Tag, Task, TimeLog
 
 
 class ConstraintTests(WorldMixin, TestCase):
@@ -400,3 +400,43 @@ class MyTimeTests(WorldMixin, TestCase):
         self.client.force_login(self.member)
         self.assertEqual(self.client.post(url).status_code, 302)
         self.assertFalse(TimeLog.objects.filter(pk=log.pk).exists())
+
+class TagManagementTests(WorldMixin, TestCase):
+    def test_only_admins_can_manage_tags(self):
+        self.assertEqual(self.client.get(reverse('tags:list')).status_code, 302)  # sin sesión
+        for user in (self.member, self.client_user):
+            self.client.force_login(user)
+            self.assertEqual(self.client.get(reverse('tags:list')).status_code, 403)
+            response = self.client.post(reverse('tags:create'), {'name': 'X', 'color': '#111111'})
+            self.assertEqual(response.status_code, 403)
+        self.assertFalse(Tag.objects.exists())
+
+    def test_admin_creates_tag_and_color_is_normalized(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(reverse('tags:create'), {'name': 'Bug', 'color': '#ff0000'})
+        self.assertRedirects(response, reverse('tags:list'))
+        self.assertEqual(Tag.objects.get(name='Bug').color, '#FF0000')
+
+    def test_invalid_color_and_duplicate_name_are_rejected(self):
+        Tag.objects.create(name='Bug', color='#111111')
+        self.client.force_login(self.admin)
+        self.client.post(reverse('tags:create'), {'name': 'Bug', 'color': '#222222'})
+        self.client.post(reverse('tags:create'), {'name': 'Otra', 'color': 'rojo'})
+        self.assertEqual(Tag.objects.count(), 1)
+
+    def test_admin_edits_tag(self):
+        tag = Tag.objects.create(name='Viejo', color='#111111')
+        self.client.force_login(self.admin)
+        self.client.post(reverse('tags:update', args=[tag.pk]), {'name': 'Nuevo', 'color': '#00ff00'})
+        tag.refresh_from_db()
+        self.assertEqual((tag.name, tag.color), ('Nuevo', '#00FF00'))
+
+    def test_deleting_a_tag_keeps_its_tasks(self):
+        tag = Tag.objects.create(name='Temporal', color='#111111')
+        self.task.tags.add(tag)
+        self.client.force_login(self.admin)
+        url = reverse('tags:delete', args=[tag.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)  # solo POST
+        self.assertRedirects(self.client.post(url), reverse('tags:list'))
+        self.assertFalse(Tag.objects.filter(pk=tag.pk).exists())
+        self.assertTrue(Task.objects.filter(pk=self.task.pk).exists())

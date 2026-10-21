@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
@@ -9,7 +11,9 @@ from django.db.models import Q
 from core.forms import DateOrderMixin, TailwindFormMixin
 from teams.models import Team
 
-from .models import Attachment, Comment, Subtask, Task, TimeLog
+from .models import Attachment, Comment, Subtask, Tag, Task, TimeLog
+
+HEX_COLOR = re.compile(r'^#[0-9A-Fa-f]{6}$')
 
 User = get_user_model()
 MAX_UPLOAD_MB = 5
@@ -186,3 +190,24 @@ class QuickTimeLogForm(TimeLogForm):
         )
         field.empty_label = 'Elige una tarea'
         field.label_from_instance = lambda task: f'{task.project.name} · {task.title}'
+
+class TagForm(TailwindFormMixin, forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = ['name', 'color']
+        labels = {'name': 'Nombre', 'color': 'Color'}
+        widgets = {'color': forms.TextInput(attrs={'type': 'color'})}
+        error_messages = {'name': {'unique': 'Ya existe una etiqueta con ese nombre.'}}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['color'].widget.attrs.update({
+            'class': 'cursor-pointer rounded-lg border border-line bg-white',
+            'style': 'width: 4rem; height: 2.75rem; padding: 0.25rem;',
+        })
+
+    def clean_color(self):
+        color = self.cleaned_data['color']
+        if not HEX_COLOR.match(color):
+            raise forms.ValidationError('Usa un color hexadecimal, por ejemplo #9C2F52.')
+        return color.upper()

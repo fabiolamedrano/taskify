@@ -1,0 +1,27 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}{% if object %}Editar etiqueta{% else %}Nueva etiqueta{% endif %} · Taskify{% endblock %}
+
+{% block page_title %}{% if object %}Editar etiqueta{% else %}Nueva etiqueta{% endif %}{% endblock %}
+
+{% block page_content %}
+<div class="mx-auto max-w-md space-y-4">
+  <a href="{% url 'tags:list' %}" class="text-sm font-medium text-brand-700 hover:underline">← Etiquetas</a>
+
+  <form method="post" class="space-y-5 rounded-xl border border-line bg-white p-6">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div role="alert" class="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    {% include 'includes/_form_fields.html' %}
+
+    <div class="flex justify-end gap-3 border-t border-line pt-5">
+      <a href="{% url 'tags:list' %}" class="rounded-lg border border-line px-4 py-2 text-sm font-medium hover:bg-surface">Cancelar</a>
+      <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">
+        {% if object %}Guardar cambios{% else %}Crear etiqueta{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

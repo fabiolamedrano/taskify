@@ -1,0 +1,40 @@
+{% extends 'layouts/app.html' %}
+
+{% block title %}Etiquetas · Taskify{% endblock %}
+
+{% block page_title %}Etiquetas{% endblock %}
+
+{% block page_content %}
+<div class="space-y-4">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-muted">Las etiquetas son globales: se pueden usar en las tareas de cualquier proyecto.</p>
+    <a href="{% url 'tags:create' %}"
+       class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">+ Nueva etiqueta</a>
+  </div>
+
+  <ul class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+    {% for tag in tags %}
+      <li class="flex items-center justify-between gap-3 px-5 py-3">
+        <div class="flex min-w-0 items-center gap-3">
+          <span class="h-3 w-3 shrink-0 rounded-full" style="background-color: {{ tag.color }}" aria-hidden="true"></span>
+          <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
+          <span class="truncate text-xs text-muted">{{ tag.color }} · {{ tag.task_count }} tarea{{ tag.task_count|pluralize }}</span>
+        </div>
+        <div class="flex shrink-0 items-center gap-3 text-sm">
+          <a href="{% url 'tags:update' tag.pk %}" class="font-medium text-brand-700 hover:underline">Editar</a>
+          <form method="post" action="{% url 'tags:delete' tag.pk %}"
+                data-confirm="Se quitará de {{ tag.task_count }} tarea{{ tag.task_count|pluralize }}. Las tareas no se borran."
+                data-confirm-title="¿Eliminar la etiqueta «{{ tag.name }}»?"
+                data-confirm-button="Eliminar" data-confirm-tone="danger">
+            {% csrf_token %}
+            <button class="font-medium text-red-700 hover:underline">Eliminar</button>
+          </form>
+        </div>
+      </li>
+    {% empty %}
+      <li class="px-5 py-10 text-center text-sm text-muted">Todavía no hay etiquetas.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

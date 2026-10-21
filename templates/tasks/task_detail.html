@@ -19,8 +19,13 @@
         <a href="{% url 'tasks:update' task.pk %}"
            class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Editar</a>
         {% if user.is_admin or task.creator_id == user.pk %}
-          <a href="{% url 'tasks:delete' task.pk %}"
-             class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</a>
+          <form method="post" action="{% url 'tasks:delete' task.pk %}"
+                data-confirm="Se eliminarán también sus subtareas, comentarios, adjuntos y registros de tiempo. Esta acción no se puede deshacer."
+                data-confirm-title="¿Eliminar «{{ task.title }}»?"
+                data-confirm-button="Eliminar tarea" data-confirm-tone="danger">
+            {% csrf_token %}
+            <button class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</button>
+          </form>
         {% endif %}
       </div>
     {% endif %}
@@ -76,10 +81,9 @@
                 </button>
               </form>
               {% if can_edit %}
-                <form method="post" action="{% url 'tasks:subtask_delete' subtask.pk %}">
-                  {% csrf_token %}
-                  <button type="submit" aria-label="Eliminar subtarea {{ subtask.title }}"
-                          class="rounded p-1.5 text-muted hover:bg-surface hover:text-red-700">✕</button>
+                <form method="post" action="{% url 'tasks:subtask_delete' subtask.pk %}"
+                      data-confirm="Se eliminará la subtarea «{{ subtask.title }}»."
+                      data-confirm-title="¿Eliminar subtarea?" data-confirm-button="Eliminar" data-confirm-tone="danger">
                 </form>
               {% endif %}
             </li>
@@ -120,7 +124,8 @@
                 <span class="text-xs text-muted">{{ attachment.created_at|date:"j M" }}</span>
                 {% if can_edit %}{% if attachment.uploaded_by_id == user.pk or user.is_admin %}
                   <form method="post" action="{% url 'tasks:attachment_delete' attachment.pk %}"
-                        onsubmit="return confirm('¿Eliminar este adjunto?')">
+                        data-confirm="Se eliminará «{{ attachment.file_name }}». Esta acción no se puede deshacer."
+                        data-confirm-title="¿Eliminar adjunto?" data-confirm-button="Eliminar" data-confirm-tone="danger">
                     {% csrf_token %}
                     <button type="submit" aria-label="Eliminar adjunto {{ attachment.file_name }}"
                             class="rounded p-1.5 text-muted hover:bg-surface hover:text-red-700">✕</button>
@@ -172,7 +177,8 @@
                   </p>
                   {% if can_edit %}{% if comment.author_id == user.pk or user.is_admin %}
                     <form method="post" action="{% url 'tasks:comment_delete' comment.pk %}"
-                          onsubmit="return confirm('¿Eliminar este comentario?')">
+                          data-confirm="El comentario se eliminará de forma permanente."
+                          data-confirm-title="¿Eliminar comentario?" data-confirm-button="Eliminar" data-confirm-tone="danger">
                       {% csrf_token %}
                       <button type="submit" aria-label="Eliminar comentario"
                               class="rounded p-1 text-xs text-muted hover:bg-surface hover:text-red-700">✕</button>

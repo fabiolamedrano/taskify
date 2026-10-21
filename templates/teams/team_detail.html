@@ -13,8 +13,13 @@
       <div class="ml-auto flex gap-2">
         <a href="{% url 'teams:update' team.pk %}"
            class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Editar</a>
-        <a href="{% url 'teams:delete' team.pk %}"
-           class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</a>
+        <form method="post" action="{% url 'teams:delete' team.pk %}"
+              data-confirm="Se quitará a todos sus miembros. Sus proyectos y tareas no se borran, pero quedarán sin equipo asignado. Esta acción no se puede deshacer."
+              data-confirm-title="¿Eliminar «{{ team.name }}»?"
+              data-confirm-button="Eliminar equipo" data-confirm-tone="danger">
+          {% csrf_token %}
+          <button class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</button>
+        </form>
       </div>
     {% endif %}
   </div>
