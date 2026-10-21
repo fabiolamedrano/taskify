@@ -94,6 +94,7 @@ class ProjectViewSet(BaseModelViewSet):
             Project.objects.visible_to(self.request.user)
             .select_related('owner', 'team')
             .with_task_counts()
+            .order_by('-created_at', '-id')
         )
 
     def perform_create(self, serializer):

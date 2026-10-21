@@ -22,35 +22,37 @@ class Command(BaseCommand):
 
         tasks = (
             Task.objects.exclude(status=Task.Status.DONE)
-            .filter(assigned_user_isnull=False, due_date__lte=limit)
+            .filter(assigned_user__isnull=False, due_date__lte=limit)
             .select_related('assigned_user')
         )
 
         created = 0
         for task in tasks:
-            alredy_sent = Notification.objects.filter(
+            already_sent = Notification.objects.filter(
                 user=task.assigned_user, task=task,
                 type=Notification.Type.DUE_DATE, created_at__gte=day_start,
             ).exists()
-            if not alredy_sent:
+            
+            if already_sent:
                 continue
 
-        days_left = (task.due_date - today).days
-        if days_left <= 0:
-            state = 'Vencida'
-        elif days_left == 0:
-            state = 'Vence hoy'
-        elif days_left == 1:
-            state = 'Vence mañana'
-        else:
-            state = f'Vence en {days_left} días'
+            days_left = (task.due_date - today).days
+            
+            if days_left < 0:
+                state = 'Vencida'
+            elif days_left == 0:
+                state = 'Vence hoy'
+            elif days_left == 1:
+                state = 'Vence mañana'
+            else:
+                state = f'Vence en {days_left} días'
 
-        Notification.objects.create(
-            user=task.assigned_user,
-            task=task,
-            type=Notification.Type.DUE_DATE,
-            message=f'{state}: "{task.title}"'[:255],
-        )
-        created += 1
+            Notification.objects.create(
+                user=task.assigned_user,
+                task=task,
+                type=Notification.Type.DUE_DATE,
+                message=f'{state}: "{task.title}"'[:255],
+            )
+            created += 1
 
         self.stdout.write(self.style.SUCCESS(f'{created} notificacion(es) creada(s).'))
