@@ -20,8 +20,13 @@
       {% if user.is_admin or project.owner_id == user.pk %}
         <a href="{% url 'projects:update' project.pk %}"
            class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Editar</a>
-        <a href="{% url 'projects:delete' project.pk %}"
-           class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</a>
+        <form method="post" action="{% url 'projects:delete' project.pk %}"
+              data-confirm="Se eliminarán también sus {{ project.task_count }} tarea{{ project.task_count|pluralize }}, con subtareas, comentarios, adjuntos y registros de tiempo. Esta acción no se puede deshacer."
+              data-confirm-title="¿Eliminar «{{ project.name }}»?"
+              data-confirm-button="Eliminar proyecto" data-confirm-tone="danger">
+          {% csrf_token %}
+          <button class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</button>
+        </form>
       {% endif %}
     </div>
   </div>

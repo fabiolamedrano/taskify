@@ -140,7 +140,9 @@
               <td class="px-5 py-3 text-right font-semibold">{{ log.hours|floatformat:"-2" }} h</td>
               <td class="px-5 py-3 text-right">
                 {% if not user.is_client %}
-                  <form method="post" action="{% url 'tasks:my_time_delete' log.pk %}">
+                  <form method="post" action="{% url 'tasks:my_time_delete' log.pk %}"
+                        data-confirm="Se eliminará el registro de {{ log.hours|floatformat:'-2' }} h en «{{ log.task.title }}»."
+                        data-confirm-title="¿Eliminar registro de tiempo?" data-confirm-button="Eliminar" data-confirm-tone="danger">
                     {% csrf_token %}
                     <button type="submit" aria-label="Eliminar registro de {{ log.hours|floatformat:'-2' }} horas en {{ log.task.title }}"
                             class="rounded p-1.5 text-muted hover:bg-surface hover:text-red-700">✕</button>
