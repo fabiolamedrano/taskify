@@ -6,16 +6,17 @@ from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.permissions import NotClientMixin, OwnerOrAdminMixin
-from core.mixins import filter_options
+from core.mixins import QueryStringMixin, filter_options
 from tasks.models import TimeLog
 
 from .forms import ProjectForm
 from .models import Project
 
 
-class ProjectListView(LoginRequiredMixin, ListView):
+class ProjectListView(LoginRequiredMixin, QueryStringMixin, ListView):
     template_name = 'projects/project_list.html'
     context_object_name = 'projects'
+    paginate_by = 12
 
     def get_queryset(self):
         queryset = (
@@ -29,7 +30,7 @@ class ProjectListView(LoginRequiredMixin, ListView):
         search = self.request.GET.get('q', '').strip()
         if search:
             queryset = queryset.filter(name__icontains=search)
-        return queryset
+        return queryset.order_by('-created_at', '-id')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
