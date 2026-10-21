@@ -22,10 +22,10 @@ class ProjectQuerySet(models.QuerySet):
 
 class Project(models.Model):
     class Status(models.TextChoices):
-        ACTIVE = 'active', 'Active'
-        PAUSED = 'paused', 'Paused'
-        COMPLETED = 'completed', 'Completed'
-        CANCELLED = 'cancelled', 'Cancelled'
+        ACTIVE = 'active', 'Activo'
+        PAUSED = 'paused', 'Pausado'
+        COMPLETED = 'completed', 'Completado'
+        CANCELLED = 'cancelled', 'Cancelado'
 
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)

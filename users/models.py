@@ -5,9 +5,9 @@ from django.db import models
 
 class User(AbstractUser):
     class Role(models.TextChoices):
-        ADMIN = 'admin', 'Administrator'
-        MEMBER = 'member', 'Member'
-        CLIENT = 'client', 'Client'
+        ADMIN = 'admin', 'Administrador'
+        MEMBER = 'member', 'Miembro'
+        CLIENT = 'client', 'Cliente'
 
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)

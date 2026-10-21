@@ -27,14 +27,14 @@ class Tag(models.Model):
 
 class Task(models.Model):
     class Priority(models.TextChoices):
-        HIGH = 'high', 'High'
-        MEDIUM = 'medium', 'Medium'
-        LOW = 'low', 'Low'
+        HIGH = 'high', 'Alta'
+        MEDIUM = 'medium', 'Media'
+        LOW = 'low', 'Baja'
 
     class Status(models.TextChoices):
-        TODO = 'todo', 'To-Do'
-        DOING = 'doing', 'Doing'
-        DONE = 'done', 'Done'
+        TODO = 'todo', 'Por hacer'
+        DOING = 'doing', 'En progreso'
+        DONE = 'done', 'Hecho'
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -133,9 +133,9 @@ class Comment(models.Model):
 
 class Attachment(models.Model):
     class Type(models.TextChoices):
-        DOCUMENT = 'document', 'Document'
-        IMAGE = 'image',  'Image'
-        LINK = 'link', 'Link'
+        DOCUMENT = 'document', 'Documento'
+        IMAGE = 'image',  'Imagen'
+        LINK = 'link', 'Enlace'
 
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
     uploaded_by = models.ForeignKey(

@@ -5,9 +5,9 @@ from django.db import models
 
 class Notification(models.Model):
     class Type(models.TextChoices):
-        ASSIGNMENT = 'assignment', 'Assignment'
-        DUE_DATE = 'due_date', 'Due Date'
-        COMMENT = 'comment', 'Comment'
+        ASSIGNMENT = 'assignment', 'Asignacion'
+        DUE_DATE = 'due_date', 'Vencimiento'
+        COMMENT = 'comment', 'Comentario'
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications',
