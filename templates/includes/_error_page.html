@@ -1,0 +1,13 @@
+<main class="flex min-h-screen items-center justify-center px-4">
+  <div class="w-full max-w-md text-center">
+    <p class="text-6xl font-bold text-brand-700">{{ code }}</p>
+    <h1 class="mt-4 text-2xl font-bold">{{ title }}</h1>
+    <p class="mt-2 text-muted">{{ message }}</p>
+    <div class="mt-6 flex justify-center gap-3">
+      <a href="{% url 'dashboard' %}"
+         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Ir al inicio</a>
+      <button type="button" onclick="history.back()"
+              class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Volver</button>
+    </div>
+  </div>
+</main>

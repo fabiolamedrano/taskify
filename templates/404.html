@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+
+{% block title %}No encontrada · Taskify{% endblock %}
+
+{% block content %}
+  {% include 'includes/_error_page.html' with code='404' title='Página no encontrada' message='La página no existe, o no tienes acceso a ella.' %}
+{% endblock %}
