@@ -58,7 +58,6 @@
       </div>
       <div class="flex shrink-0 items-center gap-2">
         
-        <!-- INSTRUCCIÓN 2: Reemplazada la etiqueta <a ...> de apertura de la campana -->
         <a href="{% url 'notifications:list' %}"
            aria-label="Notificaciones{% if unread_notifications_count %}, {{ unread_notifications_count }} sin leer{% endif %}"
            class="relative rounded-lg border p-2 {% if request.resolver_match.app_name == 'notifications' %}border-brand-700 bg-brand-100{% else %}border-line hover:bg-surface{% endif %}">
@@ -77,23 +76,44 @@
       </div>
     </header>
 
-    <main class="flex-1 p-6">
-      {% if messages %}
-        <div class="mb-4 space-y-2">
-          {% for message in messages %}
-            <p role="status"
-               class="rounded-lg px-4 py-2 text-sm {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-teal-50 text-teal-800{% endif %}">
-              {{ message }}
-            </p>
-          {% endfor %}
-        </div>
-      {% endif %}
+    <main class="flex-1 p-4 sm:p-6">
       {% block page_content %}{% endblock %}
     </main>
   </div>
 </div>
+<!-- Modal de confirmación reutilizable -->
+<dialog id="confirm-dialog" data-tone="default"
+        aria-labelledby="confirm-title" aria-describedby="confirm-message"
+        class="group m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-black/50">
+  <form method="dialog" class="p-6">
+    <h2 id="confirm-title" class="text-lg font-bold"></h2>
+    <p id="confirm-message" class="mt-2 text-sm text-muted"></p>
+    <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <button value="cancel" autofocus
+              class="rounded-lg border border-line px-4 py-2 text-sm font-medium hover:bg-surface">Cancelar</button>
+      <button id="confirm-accept" value="confirm"
+              class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 group-data-[tone=danger]:bg-red-700 group-data-[tone=danger]:hover:bg-red-800">Confirmar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Avisos -->
+{% if messages %}
+  <div class="fixed inset-x-4 top-4 z-50 flex flex-col gap-2 sm:left-auto sm:right-4 sm:w-96">
+    {% for message in messages %}
+      <div data-toast {% if message.tags == 'error' %}data-persist role="alert"{% else %}role="status"{% endif %}
+           class="flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg transition-opacity duration-200 {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-teal-200 bg-teal-50 text-teal-900{% endif %}">
+        <p class="flex-1">{{ message }}</p>
+        <button type="button" data-toast-close aria-label="Cerrar aviso"
+                class="shrink-0 rounded p-0.5 hover:bg-black/5">✕</button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
 <script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/ui.js' %}"></script>
 {% endblock %}
