@@ -1,4 +1,3 @@
-import json
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
@@ -9,7 +8,6 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db.models import Count, F, Max, Q, Sum
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -61,27 +59,6 @@ class BoardView(LoginRequiredMixin, DetailView):
         context['today'] = timezone.localdate()
         return context
 
-
-class TaskMoveView(LoginRequiredMixin, View):
-    http_method_names = ['post']
-
-    def post(self, request, pk):
-        if request.user.is_client:
-            return JsonResponse({'error': 'Sin permiso para mover tareas.'}, status=403)
-
-        task = get_object_or_404(Task.objects.visible_to(request.user), pk=pk)
-
-        try:
-            status = json.loads(request.body)['status']
-        except (ValueError, KeyError, TypeError):
-            return JsonResponse({'error': 'Solicitud inválida.'}, status=400)
-
-        if status not in Task.Status.values:
-            return JsonResponse({'error': 'Estado inválido.'}, status=400)
-
-        task.status = status
-        task.save(update_fields=['status', 'updated_at'])
-        return JsonResponse({'status': task.status, 'label': task.get_status_display()})
 
 class TaskDetailView(LoginRequiredMixin, DetailView):
     template_name = 'tasks/task_detail.html'

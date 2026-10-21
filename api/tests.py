@@ -114,6 +114,20 @@ class TaskAPITests(APITestMixin, APITestCase):
         self.login(self.leader)
         self.assertEqual(self.client.delete(url).status_code, 204)
 
+    def test_moving_a_hidden_task_is_404(self):
+        self.login(self.member)
+        response = self.client.patch(
+            reverse('api:task-detail', args=[self.hidden_task.pk]), {'status': 'done'}, format='json',
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_status_is_rejected(self):
+        self.login(self.member)
+        response = self.client.patch(
+            reverse('api:task-detail', args=[self.task.pk]), {'status': 'volando'}, format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
 
 class RelatedResourcesAPITests(APITestMixin, APITestCase):
     def test_comment_author_comes_from_the_session(self):
@@ -169,3 +183,10 @@ class UserAPITests(APITestMixin, APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertNotIn('password', response.json())
         self.assertTrue(User.objects.get(username='creado').check_password('Clave-segura-2026'))
+
+class DocumentationTests(APITestMixin, APITestCase):
+    def test_schema_and_docs_are_served(self):
+        response = self.client.get(reverse('api:schema'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'/api/tasks/{id}/', response.content)
+        self.assertEqual(self.client.get(reverse('api:docs')).status_code, 200)

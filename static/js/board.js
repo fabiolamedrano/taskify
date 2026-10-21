@@ -31,7 +31,7 @@ if (board) {
     updateCounts();
     try {
       const response = await fetch(card.dataset.moveUrl, {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
         body: JSON.stringify({ status }),
       });

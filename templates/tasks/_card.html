@@ -1,4 +1,4 @@
-<li data-task data-move-url="{% url 'tasks:move' task.pk %}"
+<li data-task data-move-url="{% url 'api:task-detail' task.pk %}"
     class="rounded-lg border border-line bg-white p-3 shadow-sm {% if can_move %}cursor-grab active:cursor-grabbing{% endif %}">
   <a href="{% url 'tasks:detail' task.pk %}" class="font-semibold hover:text-brand-700">{{ task.title }}</a>
 

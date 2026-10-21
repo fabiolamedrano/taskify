@@ -1,4 +1,3 @@
-import json
 import os
 from datetime import date, timedelta
 from decimal import Decimal
@@ -49,42 +48,6 @@ class BoardTests(WorldMixin, TestCase):
         self.client.force_login(self.member)
         response = self.client.get(reverse('tasks:board', args=[self.hidden_project.pk]))
         self.assertEqual(response.status_code, 404)
-
-
-class MoveTaskTests(WorldMixin, TestCase):
-    def move(self, task, status, raw=None):
-        body = raw if raw is not None else json.dumps({'status': status})
-        return self.client.post(
-            reverse('tasks:move', args=[task.pk]), data=body, content_type='application/json',
-        )
-
-    def test_member_can_move_task(self):
-        self.client.force_login(self.member)
-        response = self.move(self.task, Task.Status.DOING)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['status'], 'doing')
-        self.task.refresh_from_db()
-        self.assertEqual(self.task.status, Task.Status.DOING)
-
-    def test_invalid_status_and_payloads_are_rejected(self):
-        self.client.force_login(self.member)
-        self.assertEqual(self.move(self.task, 'volando').status_code, 400)
-        self.assertEqual(self.move(self.task, None, raw='no es json').status_code, 400)
-        self.assertEqual(self.move(self.task, None, raw='[]').status_code, 400)
-
-    def test_client_cannot_move_tasks(self):
-        self.client.force_login(self.client_user)
-        self.assertEqual(self.move(self.task, 'done').status_code, 403)
-
-    def test_cannot_move_hidden_task(self):
-        self.client.force_login(self.member)
-        self.assertEqual(self.move(self.hidden_task, 'done').status_code, 404)
-
-    def test_anonymous_and_get_requests_are_blocked(self):
-        url = reverse('tasks:move', args=[self.task.pk])
-        self.assertEqual(self.client.post(url).status_code, 302)
-        self.client.force_login(self.member)
-        self.assertEqual(self.client.get(url).status_code, 405)
 
 
 class TaskCrudTests(WorldMixin, TestCase):
