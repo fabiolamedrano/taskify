@@ -17,3 +17,7 @@ if (sidebar && overlay && toggle) {
     if (event.key === 'Escape') setSidebar(false);
   });
 }
+
+document.querySelectorAll('select[data-autosubmit]').forEach((select) => {
+  select.addEventListener('change', () => select.form.requestSubmit());
+});
