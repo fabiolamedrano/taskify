@@ -1,12 +1,13 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
+from django.utils import timezone
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 
 from core.factories import WorldMixin, make_project, make_task, make_user
-from tasks.models import Task
+from tasks.models import Comment, Task, TimeLog
 
 from .models import Project
 
@@ -147,3 +148,67 @@ class ProjectListFilterTests(WorldMixin, TestCase):
         response = self.client.get(reverse('projects:list'), {'q': 'web', 'status': 'paused'})
         self.assertEqual(response.context['clear_search_url'], '?status=paused')
         self.assertEqual(response.context['current_status'], 'paused')
+
+class ProjectDetailPageTests(WorldMixin, TestCase):
+    def get(self, user, project=None, **params):
+        self.client.force_login(user)
+        url = reverse('projects:detail', args=[(project or self.project).pk])
+        return self.client.get(url, params)
+
+    def test_cards_donut_and_counts(self):
+        make_task(self.project, assigned_user=self.leader, status=Task.Status.DONE)
+        make_task(self.project)
+        context = self.get(self.member).context
+        self.assertEqual(context['status_counts'], {'todo': 2, 'doing': 0, 'done': 1})
+        self.assertEqual(context['donut']['done_pct'], 33)
+        self.assertEqual(context['cards'][1]['value'], 2)
+        self.assertEqual(context['cards'][0]['value'], 33)
+
+    def test_my_tasks_and_workload(self):
+        make_task(self.project, assigned_user=self.leader, status=Task.Status.DONE)
+        make_task(self.project)
+        context = self.get(self.member).context
+        self.assertEqual([task.pk for task in context['my_tasks']], [self.task.pk])
+        rows = {row['name']: row for row in context['workload']}
+        self.assertEqual((rows['member']['total'], rows['member']['percent']), (1, 0))
+        self.assertEqual(rows['leader']['percent'], 100)
+        self.assertEqual(rows['Sin responsable']['total'], 1)
+
+    def test_weekly_hours_bars(self):
+        TimeLog.objects.create(
+            task=self.task, user=self.member, date=timezone.localdate(), hours=Decimal('4'),
+        )
+        context = self.get(self.member).context
+        bars = context['weekly']
+        self.assertEqual(len(bars), 6)
+        self.assertTrue(bars[-1]['is_current'])
+        self.assertEqual(bars[-1]['total'], Decimal('4'))
+        self.assertEqual(bars[0]['percent'], 0)
+        self.assertEqual(context['cards'][2]['value'], '4')
+
+    def test_task_filter_and_counts(self):
+        make_task(self.project, status=Task.Status.DONE, title='Lista')
+        context = self.get(self.member, status='done').context
+        self.assertEqual([task.title for task in context['tasks']], ['Lista'])
+        options = {option['label']: option for option in context['task_filter']}
+        self.assertEqual((options['Todas']['count'], options['Hecho']['count']), (2, 1))
+        self.assertTrue(options['Hecho']['url'].endswith('#tasks'))
+        self.assertEqual(len(self.get(self.member, status='inventado').context['tasks']), 2)
+
+    def test_recent_comments_are_limited_to_four(self):
+        for number in range(6):
+            Comment.objects.create(task=self.task, author=self.leader, content=f'Comentario {number}')
+        self.assertEqual(len(self.get(self.member).context['comments']), 4)
+
+    def test_deadline_card_for_an_overdue_project(self):
+        project = make_project(
+            self.leader, self.team, due_date=timezone.localdate() - timedelta(days=3),
+        )
+        card = self.get(self.leader, project).context['cards'][3]
+        self.assertEqual((card['value'], card['alert']), (3, True))
+
+    def test_client_sees_the_page_without_edit_controls(self):
+        response = self.get(self.client_user)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, reverse('projects:update', args=[self.project.pk]))
+        self.assertNotContains(response, reverse('tasks:create', args=[self.project.pk]))

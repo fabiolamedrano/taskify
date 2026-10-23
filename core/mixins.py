@@ -6,7 +6,8 @@ class QueryStringMixin:
         context['query_string'] = params.urlencode()
         return context
 
-def filter_options(request, param, choices, current, all_label='Todos', counts=None):
+def filter_options(request, param, choices, current, all_label='Todos', counts=None, fragment=''):
+    suffix = f'#{fragment}' if fragment else ''
     options = []
     for value, label in [('', all_label), *choices]:
         params = request.GET.copy()
@@ -18,7 +19,7 @@ def filter_options(request, param, choices, current, all_label='Todos', counts=N
         query = params.urlencode()
         option = {
             'label': label,
-            'url': f'?{query}' if query else request.path,
+            'url': f'?{query}{suffix}' if query else f'{request.path}{suffix}',
             'active': current == value,
         }
         if counts is not None:

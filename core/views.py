@@ -6,6 +6,8 @@ from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
 from django.views.generic import TemplateView
 
+from core.charts import build_donut
+
 from notifications.models import Notification
 from projects.models import Project
 from tasks.models import Task, TimeLog
@@ -34,7 +36,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             overdue=Count('id', filter=not_done & Q(due_date__lt=today)),
         )
         context['stats'] = stats
-        context['donut'] = self.build_donut(stats)
+        context['donut'] = build_donut(stats['todo'], stats['doing'], stats['done'])
         context['week'] = self.build_week(user, today)
 
         context['month_hours'] = TimeLog.objects.filter(
@@ -62,16 +64,6 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['today'] = today
         return context
 
-    @staticmethod
-    def build_donut(stats):
-        """Porcentajes enteros para el gráfico de dona (con decimales, el idioma
-        español usaría coma y rompería el CSS)."""
-        total = stats['todo'] + stats['doing'] + stats['done']
-        if not total:
-            return {'total': 0, 'done_pct': 0, 'doing_end': 0}
-        done_pct = round(100 * stats['done'] / total)
-        doing_end = min(100, done_pct + round(100 * stats['doing'] / total))
-        return {'total': total, 'done_pct': done_pct, 'doing_end': doing_end}
 
     @staticmethod
     def build_week(user, today):
