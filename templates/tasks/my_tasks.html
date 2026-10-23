@@ -1,76 +1,143 @@
 {% extends 'layouts/app.html' %}
+{% load static %}
 
 {% block title %}Mis tareas · Taskify{% endblock %}
 
 {% block page_title %}Mis tareas{% endblock %}
 
 {% block page_content %}
-<div class="space-y-6">
+{% url 'tasks:mine' as mine_url %}
+<div class="space-y-5">
 
-  <section aria-label="Resumen" class="flex flex-wrap gap-3">
-    {% include 'includes/_stat_tile.html' with label='En la lista' value=total accent='border-l-ink' %}
-    {% include 'includes/_stat_tile.html' with label='Vencen esta semana' value=due_week_count accent='border-l-amber-500' %}
-    {% include 'includes/_stat_tile.html' with label='Vencidas' value=overdue_count accent='border-l-red-600' %}
-  </section>
-
-  <div class="space-y-4">
-    <form method="get" class="flex flex-wrap gap-3">
-      {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
-      {% if current_priority %}<input type="hidden" name="priority" value="{{ current_priority }}">{% endif %}
-      <input type="search" name="q" value="{{ q }}" placeholder="Buscar tarea..." aria-label="Buscar tarea"
-             class="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 sm:w-60">
-      <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Buscar</button>
-      {% if q or current_status or current_priority %}
-        <a href="{% url 'tasks:mine' %}" class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Limpiar</a>
-      {% endif %}
-    </form>
-    {% include 'includes/_filter_chips.html' with options=status_options label='Estado' %}
-    {% include 'includes/_filter_chips.html' with options=priority_options label='Prioridad' %}
+  <!-- Título y selector de vista -->
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Mis tareas</h2>
+      <p class="mt-1 text-muted">Lo que tienes asignado, en todos tus proyectos.</p>
+    </div>
+    <div class="inline-flex rounded-full border border-line/70 bg-white p-1" role="group" aria-label="Forma de ver las tareas">
+      {% for option in view_options %}
+        <a href="{{ option.url }}" {% if option.active %}aria-current="true"{% endif %}
+           class="rounded-full px-5 py-1.5 text-sm font-medium transition {% if option.active %}bg-ink text-white{% else %}text-muted hover:text-ink{% endif %}">{{ option.label }}</a>
+      {% endfor %}
+    </div>
   </div>
 
-  {% for group in groups %}
-    <section class="rounded-xl border border-line bg-white">
-      <h2 class="flex items-center justify-between gap-3 border-b border-line px-5 py-4">
-        <a href="{{ group.project.get_absolute_url }}" class="font-bold hover:text-brand-700">{{ group.project.name }}</a>
-        <span class="shrink-0 text-sm font-normal text-muted">{{ group.tasks|length }} tarea{{ group.tasks|length|pluralize }}</span>
-      </h2>
-      <ul class="divide-y divide-line">
-        {% for task in group.tasks %}
-          <li class="flex items-start justify-between gap-4 px-5 py-4">
-            <div class="min-w-0">
-              <a href="{{ task.get_absolute_url }}" class="block truncate font-semibold hover:text-brand-700">{{ task.title }}</a>
-              <div class="mt-2 flex flex-wrap items-center gap-2">
-                <span class="rounded-full px-2 py-0.5 text-xs font-medium
-                  {% if task.status == 'done' %}bg-teal-100 text-teal-800
-                  {% elif task.status == 'doing' %}bg-brand-100 text-brand-800
-                  {% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
-                {% for tag in task.tags.all %}
-                  <span class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                        style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
-                {% endfor %}
-              </div>
-            </div>
-            <div class="shrink-0 text-right text-sm">
-              {% if task.is_overdue %}
-                <p class="font-semibold text-red-700">Vencida · {{ task.due_date|date:"j M" }}</p>
-              {% elif task.due_date %}
-                <p class="text-muted">{{ task.due_date|date:"j M" }}</p>
-              {% else %}
-                <p class="text-muted">Sin fecha</p>
-              {% endif %}
-              <p class="mt-1 flex items-center justify-end gap-1.5 text-xs text-muted">
-                <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
-                {{ task.get_priority_display }}
-              </p>
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
-    </section>
-  {% empty %}
-    <p class="rounded-xl border border-line bg-white px-5 py-10 text-center text-sm text-muted">
-      {% if q or current_status or current_priority %}No hay tareas que coincidan con los filtros.{% else %}No tienes tareas pendientes. ¡Buen trabajo!{% endif %}
+  <!-- Resumen -->
+  <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% include 'core/_stat_card.html' with label='Abiertas' value=stats.open href=mine_url caption='Tareas pendientes' dark=True %}
+    {% include 'core/_stat_card.html' with label='Vencen esta semana' value=stats.due_week href=mine_url|add:'?due=week' caption='En los próximos 7 días' %}
+    {% include 'core/_stat_card.html' with label='Vencidas' value=stats.overdue href=mine_url|add:'?due=overdue' caption='Requieren atención' alert=True %}
+    {% include 'core/_stat_card.html' with label='Hechas' value=stats.done href=mine_url|add:'?status=done' caption='Tareas completadas' %}
+  </section>
+
+  <!-- Búsqueda y filtros -->
+  <div class="space-y-4">
+    <form method="get" role="search" class="relative max-w-md">
+      {% for key, value in hidden_params %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+      <label for="task-search" class="sr-only">Buscar tarea</label>
+      <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="task-search" type="search" name="q" value="{{ q }}" placeholder="Buscar tarea..."
+             class="w-full rounded-full border border-line/70 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+    </form>
+
+    <div class="flex flex-wrap gap-x-8 gap-y-4">
+      {% include 'includes/_filter_chips.html' with options=due_options label='Vencimiento' %}
+      {% include 'includes/_filter_chips.html' with options=priority_options label='Prioridad' %}
+      {% if mode == 'list' %}
+        {% include 'includes/_filter_chips.html' with options=status_options label='Estado' %}
+      {% endif %}
+    </div>
+
+    {% if has_filters %}
+      <a href="{{ clear_url }}" class="inline-block rounded-full border border-line bg-white px-4 py-1.5 text-sm font-medium hover:bg-surface">Quitar filtros</a>
+    {% endif %}
+  </div>
+
+  {% if mode == 'board' %}
+
+    <p id="board-error" role="alert" class="hidden rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700">
+      No se pudo mover la tarea. Inténtalo de nuevo.
     </p>
-  {% endfor %}
+
+    <div id="board" data-csrf="{{ csrf_token }}" data-can-move="{{ can_move|yesno:'true,false' }}"
+         class="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+      {% for value, label, items in columns %}
+        <section class="min-w-0 rounded-3xl border border-line/70 bg-white/60 p-3" aria-label="{{ label }}">
+          <h3 class="flex items-center justify-between px-2 pb-3 pt-1">
+            <span class="rounded-full px-3 py-1 text-sm font-bold {% if value == 'doing' %}bg-brand-100 text-brand-900{% elif value == 'done' %}bg-teal-100 text-teal-800{% else %}bg-line text-ink{% endif %}">{{ label }}</span>
+            <span data-count-for="{{ value }}" class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold">{{ items|length }}</span>
+          </h3>
+          <ul data-column="{{ value }}" class="min-h-24 space-y-3">
+            {% for task in items %}
+              {% include 'tasks/_task_card.html' %}
+            {% endfor %}
+          </ul>
+          {% if value == 'done' and done_hidden %}
+            <a href="{{ mine_url }}?status=done"
+               class="mt-3 block rounded-2xl px-3 py-2 text-center text-xs font-medium text-muted hover:bg-white">
+              Y {{ done_hidden }} más · Ver todas las hechas
+            </a>
+          {% endif %}
+        </section>
+      {% endfor %}
+    </div>
+
+  {% else %}
+
+    {% for group in groups %}
+      <section class="rounded-3xl border border-line/70 bg-white">
+        <h3 class="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+          <a href="{{ group.project.get_absolute_url }}" class="min-w-0 truncate text-lg font-bold hover:text-brand-700">{{ group.project.name }}</a>
+          <span class="shrink-0 rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted">{{ group.tasks|length }} tarea{{ group.tasks|length|pluralize }}</span>
+        </h3>
+        <ul class="divide-y divide-line border-t border-line">
+          {% for task in group.tasks %}
+            <li class="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
+              <div class="min-w-0">
+                <a href="{{ task.get_absolute_url }}" class="block truncate font-semibold hover:text-brand-700">{{ task.title }}</a>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                  <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {% if task.status == 'done' %}bg-teal-100 text-teal-800{% elif task.status == 'doing' %}bg-brand-100 text-brand-800{% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
+                  {% for tag in task.tags.all %}
+                    <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
+                  {% endfor %}
+                  {% if task.subtask_total %}
+                    <span class="text-xs text-muted">{{ task.subtask_done }}/{{ task.subtask_total }} subtareas</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="shrink-0 text-right text-sm">
+                {% if task.is_overdue %}
+                  <p class="font-semibold text-red-700">Vencida · {{ task.due_date|date:"j M" }}</p>
+                {% elif task.due_date %}
+                  <p class="text-muted">{{ task.due_date|date:"j M" }}</p>
+                {% else %}
+                  <p class="text-muted">Sin fecha</p>
+                {% endif %}
+                <p class="mt-1 flex items-center justify-end gap-1.5 text-xs text-muted">
+                  <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
+                  {{ task.get_priority_display }}
+                </p>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% empty %}
+      <div class="rounded-3xl border border-dashed border-line bg-white px-5 py-14 text-center">
+        <p class="font-semibold">{% if has_filters %}No hay tareas que coincidan con los filtros{% else %}No tienes tareas pendientes{% endif %}</p>
+        <p class="mt-1 text-sm text-muted">{% if has_filters %}Prueba con otros filtros o quítalos.{% else %}¡Buen trabajo!{% endif %}</p>
+      </div>
+    {% endfor %}
+
+  {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+{% if mode == 'board' %}
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="{% static 'js/board.js' %}"></script>
+{% endif %}
 {% endblock %}
