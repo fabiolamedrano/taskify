@@ -2,94 +2,154 @@
 
 {% block title %}Dashboard · Taskify{% endblock %}
 
-{% block page_title %}Hola, {{ user.first_name|default:user.username }}{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block page_content %}
-<div class="space-y-6">
+{% url 'tasks:mine' as mine_url %}
+{% url 'tasks:my_time' as time_url %}
+<div class="space-y-5">
+
+  <!-- Saludo y acciones -->
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Hola, {{ user.first_name|default:user.username }}</h2>
+      <p class="mt-1 text-muted">Esto es lo que tienes pendiente.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ mine_url }}" class="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium hover:bg-surface">Mis tareas</a>
+      {% if not user.is_client %}
+        <a href="{% url 'projects:create' %}" class="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-900">+ Nuevo proyecto</a>
+      {% endif %}
+    </div>
+  </div>
 
   <!-- Resumen -->
   <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <div class="rounded-xl border border-l-4 border-line border-l-ink bg-white p-5">
-      <p class="text-sm text-muted">Pendientes</p>
-      <p class="mt-2 text-3xl font-bold">{{ stats.todo }}</p>
-    </div>
-    <div class="rounded-xl border border-l-4 border-line border-l-brand-700 bg-white p-5">
-      <p class="text-sm text-muted">En progreso</p>
-      <p class="mt-2 text-3xl font-bold">{{ stats.doing }}</p>
-    </div>
-    <div class="rounded-xl border border-l-4 border-line border-l-amber-500 bg-white p-5">
-      <p class="text-sm text-muted">Vencen esta semana</p>
-      <p class="mt-2 text-3xl font-bold">{{ stats.due_soon }}</p>
-      {% if stats.overdue %}
-        <p class="mt-1 text-sm font-semibold text-red-700">{{ stats.overdue }} vencida{{ stats.overdue|pluralize }}</p>
-      {% endif %}
-    </div>
-    <div class="rounded-xl border border-l-4 border-line border-l-teal-600 bg-white p-5">
-      <p class="text-sm text-muted">Horas este mes</p>
-      <p class="mt-2 text-3xl font-bold">{{ month_hours|floatformat:"-1" }} h</p>
-    </div>
+    {% include 'core/_stat_card.html' with label='Pendientes' value=stats.todo href=mine_url|add:'?status=todo' caption='Tareas por hacer' dark=True %}
+    {% include 'core/_stat_card.html' with label='En curso' value=stats.doing href=mine_url|add:'?status=doing' caption='Tareas en progreso' %}
+    {% include 'core/_stat_card.html' with label='Vencen esta semana' value=stats.due_soon href=mine_url caption='En los próximos 7 días' %}
+    {% include 'core/_stat_card.html' with label='Vencidas' value=stats.overdue href=mine_url caption='Requieren atención' alert=True %}
   </section>
 
-  <div class="grid gap-6 lg:grid-cols-3">
+  <div class="grid gap-5 xl:grid-cols-3">
 
-    <!-- Próximas tareas -->
-    <section class="rounded-xl border border-line bg-white lg:col-span-2">
-      <h2 class="flex items-center justify-between border-b border-line px-5 py-4 font-bold">
-        Mis próximas tareas
-        <a href="{% url 'tasks:mine' %}" class="text-sm font-medium text-brand-700 hover:underline">Ver todas</a>
-      </h2>
-      <ul class="divide-y divide-line">
-        {% for task in upcoming_tasks %}
-          <li class="flex items-start justify-between gap-4 px-5 py-4">
-            <div class="min-w-0">
-              <a href="{% url 'tasks:detail' task.pk %}" class="block truncate font-semibold hover:text-brand-700">{{ task.title }}</a>
-              <p class="mt-1 text-sm text-muted">{{ task.project.name }} · {{ task.get_status_display }}</p>
-              <div class="mt-2 flex flex-wrap gap-2">
-                {% for tag in task.tags.all %}
-                  <span class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                        style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
-                {% endfor %}
+    <div class="min-w-0 space-y-5 xl:col-span-2">
+      <div class="grid gap-5 md:grid-cols-5">
+
+        <!-- Horas de la semana -->
+        <section class="min-w-0 rounded-3xl border border-line/70 bg-white p-5 sm:p-6 md:col-span-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold">Horas de la semana</h2>
+              <p class="text-sm text-muted">{{ week.total|floatformat:"-1" }} h esta semana · {{ month_hours|floatformat:"-1" }} h este mes</p>
+            </div>
+            <a href="{{ time_url }}" class="shrink-0 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium hover:bg-surface">Ver detalle</a>
+          </div>
+          <div class="mt-6 grid grid-cols-7 gap-2 sm:gap-3">
+            {% for day in week.days %}
+              <div class="flex min-w-0 flex-col items-center gap-2">
+                <span class="h-4 text-xs font-semibold">{% if day.total %}{{ day.total|floatformat:"-1" }}{% endif %}</span>
+                <div class="flex h-36 w-full max-w-[3.5rem] items-end">
+                  {% if day.total %}
+                    <div class="w-full rounded-full {% if day.is_today %}bg-brand-700{% else %}bg-ink{% endif %}"
+                         style="height: {{ day.percent }}%" role="img"
+                         aria-label="{{ day.label }}: {{ day.total|floatformat:'-1' }} horas"></div>
+                  {% else %}
+                    <div class="w-full rounded-full" aria-hidden="true"
+                         style="height: 22%; background-image: repeating-linear-gradient(135deg, #D9D4D7 0 3px, transparent 3px 7px)"></div>
+                  {% endif %}
+                </div>
+                <span class="text-xs {% if day.is_today %}font-bold{% else %}text-muted{% endif %}">{{ day.label }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+
+        <!-- Estado de mis tareas -->
+        <section class="min-w-0 rounded-3xl border border-line/70 bg-white p-5 sm:p-6 md:col-span-2">
+          <h2 class="text-lg font-bold">Estado de mis tareas</h2>
+          <div class="mt-5 flex flex-col items-center gap-5">
+            <div class="relative h-40 w-40 rounded-full" role="img"
+                 aria-label="{{ stats.done }} hechas, {{ stats.doing }} en curso y {{ stats.todo }} por hacer"
+                 style="background: conic-gradient(#9C2F52 0 {{ donut.done_pct }}%, #2A1D23 {{ donut.done_pct }}% {{ donut.doing_end }}%, #E5E2E4 {{ donut.doing_end }}% 100%)">
+              <div class="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white">
+                {% if donut.total %}
+                  <span class="text-3xl font-bold">{{ donut.done_pct }}%</span>
+                  <span class="text-xs text-muted">hecho</span>
+                {% else %}
+                  <span class="px-2 text-center text-xs text-muted">Sin tareas asignadas</span>
+                {% endif %}
               </div>
             </div>
-            <div class="shrink-0 text-right text-sm">
-              {% if task.due_date %}
-                {% if task.due_date < today %}
-                  <p class="font-semibold text-red-700">Vencida · {{ task.due_date|date:"j M" }}</p>
-                {% else %}
-                  <p class="text-muted">{{ task.due_date|date:"j M" }}</p>
+            <ul class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+              <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-brand-700"></span>Hecho {{ stats.done }}</li>
+              <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-ink"></span>En curso {{ stats.doing }}</li>
+              <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-line"></span>Por hacer {{ stats.todo }}</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- Próximas tareas -->
+      <section class="min-w-0 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-bold">Mis próximas tareas</h2>
+          <a href="{{ mine_url }}" class="shrink-0 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium hover:bg-surface">Ver todas</a>
+        </div>
+        <ul class="mt-3 divide-y divide-line">
+          {% for task in upcoming_tasks %}
+            <li class="flex items-center justify-between gap-4 py-3">
+              <div class="min-w-0">
+                <a href="{{ task.get_absolute_url }}" class="block truncate font-semibold hover:text-brand-700">{{ task.title }}</a>
+                <p class="mt-0.5 truncate text-sm text-muted">{{ task.project.name }}</p>
+                {% if task.tags.all %}
+                  <div class="mt-1.5 flex flex-wrap gap-1.5">
+                    {% for tag in task.tags.all %}
+                      <span class="rounded-full px-2 py-0.5 text-xs font-medium" style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
+                    {% endfor %}
+                  </div>
                 {% endif %}
-              {% else %}
-                <p class="text-muted">Sin fecha</p>
-              {% endif %}
-              <p class="mt-1 flex items-center justify-end gap-1.5 text-xs text-muted">
-                <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
-                {{ task.get_priority_display }}
-              </p>
-            </div>
-          </li>
-        {% empty %}
-          <li class="px-5 py-8 text-center text-sm text-muted">No tienes tareas pendientes.</li>
-        {% endfor %}
-      </ul>
-    </section>
+              </div>
+              <div class="flex shrink-0 flex-col items-end gap-1.5 text-sm">
+                <span class="rounded-full px-2.5 py-0.5 text-xs font-medium
+                  {% if task.status == 'doing' %}bg-brand-100 text-brand-800{% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
+                {% if task.is_overdue %}
+                  <span class="font-semibold text-red-700">Vencida · {{ task.due_date|date:"j M" }}</span>
+                {% elif task.due_date %}
+                  <span class="text-muted">{{ task.due_date|date:"j M" }}</span>
+                {% else %}
+                  <span class="text-muted">Sin fecha</span>
+                {% endif %}
+              </div>
+            </li>
+          {% empty %}
+            <li class="py-8 text-center text-sm text-muted">No tienes tareas pendientes.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
 
-    <div class="space-y-6">
+    <div class="min-w-0 space-y-5">
 
-      <!-- Progreso por proyecto -->
-      <section class="rounded-xl border border-line bg-white">
-        <h2 class="border-b border-line px-5 py-4 font-bold">Progreso por proyecto</h2>
-        <ul class="space-y-4 p-5">
+      <!-- Proyectos -->
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-bold">Proyectos</h2>
+          <a href="{% url 'projects:list' %}" class="shrink-0 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium hover:bg-surface">Ver todos</a>
+        </div>
+        <ul class="mt-4 space-y-5">
           {% for project in projects %}
             <li>
-              <div class="flex justify-between text-sm">
-                <a href="{% url 'projects:detail' project.pk %}" class="font-semibold hover:text-brand-700">{{ project.name }}</a>
-                <span class="text-muted">{{ project.progress }}%</span>
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <a href="{{ project.get_absolute_url }}" class="truncate font-semibold hover:text-brand-700">{{ project.name }}</a>
+                <span class="shrink-0 text-muted">{{ project.progress }}%</span>
               </div>
-              <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"
+              <div class="mt-2 h-2.5 rounded-full bg-line" role="progressbar"
                    aria-label="Progreso de {{ project.name }}"
                    aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
-                <div class="h-2 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
+                <div class="h-2.5 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
               </div>
+              <p class="mt-1 text-xs text-muted">{{ project.done_count }} de {{ project.task_count }} tareas</p>
             </li>
           {% empty %}
             <li class="text-sm text-muted">Todavía no participas en ningún proyecto.</li>
@@ -98,42 +158,44 @@
       </section>
 
       <!-- Notificaciones -->
-      <section class="rounded-xl border border-line bg-white">
-        <h2 class="flex items-center justify-between border-b border-line px-5 py-4 font-bold">
-          Notificaciones
-          {% if unread_count %}
-            <span class="rounded-full bg-brand-700 px-2 py-0.5 text-xs font-semibold text-white">{{ unread_count }}</span>
-          {% endif %}
-        </h2>
-        <ul class="divide-y divide-line">
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="flex items-center gap-2 text-lg font-bold">
+            Notificaciones
+            {% if unread_count %}
+              <span class="rounded-full bg-brand-700 px-2 py-0.5 text-xs font-semibold text-white">{{ unread_count }}</span>
+            {% endif %}
+          </h2>
+          <a href="{% url 'notifications:list' %}" class="shrink-0 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium hover:bg-surface">Ver todas</a>
+        </div>
+        <ul class="mt-4 space-y-2">
           {% for notification in notifications %}
-            <li class="border-l-4 px-5 py-3 {% if notification.is_read %}border-l-transparent{% else %}border-l-brand-700{% endif %}">
-              {% if notification.task_id %}
-                <form method="post" action="{% url 'notifications:open' notification.pk %}">
-                  {% csrf_token %}
-                  <button class="text-left text-sm hover:text-brand-700 {% if not notification.is_read %}font-semibold{% endif %}">
-                    {{ notification.message }}
-                  </button>
-                </form>
-              {% else %}
-                <p class="text-sm {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</p>
-              {% endif %}
-              <p class="mt-0.5 text-xs text-muted">Hace {{ notification.created_at|timesince }}</p>
+            <li class="flex items-start gap-3 rounded-2xl bg-surface px-4 py-3">
+              <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full {% if notification.is_read %}bg-line{% else %}bg-brand-700{% endif %}"
+                    role="img" aria-label="{% if notification.is_read %}Leída{% else %}Sin leer{% endif %}"></span>
+              <div class="min-w-0">
+                {% if notification.task_id %}
+                  <form method="post" action="{% url 'notifications:open' notification.pk %}">
+                    {% csrf_token %}
+                    <button class="text-left text-sm hover:text-brand-700 {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</button>
+                  </form>
+                {% else %}
+                  <p class="text-sm {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</p>
+                {% endif %}
+                <p class="mt-0.5 text-xs text-muted">Hace {{ notification.created_at|timesince }}</p>
+              </div>
             </li>
           {% empty %}
-            <li class="px-5 py-6 text-center text-sm text-muted">Sin notificaciones.</li>
+            <li class="py-4 text-center text-sm text-muted">Sin notificaciones.</li>
           {% endfor %}
         </ul>
-        <div class="flex items-center justify-between gap-3 border-t border-line px-5 py-3 text-sm">
-          <a href="{% url 'notifications:list' %}" class="font-medium text-brand-700 hover:underline">Ver todas</a>
-          {% if unread_count %}
-            <form method="post" action="{% url 'notifications:read_all' %}">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="{% url 'dashboard' %}">
-              <button class="font-medium text-muted hover:text-ink">Marcar todas como leídas</button>
-            </form>
-          {% endif %}
-        </div>
+        {% if unread_count %}
+          <form method="post" action="{% url 'notifications:read_all' %}" class="mt-4">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'dashboard' %}">
+            <button class="w-full rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-surface">Marcar todas como leídas</button>
+          </form>
+        {% endif %}
       </section>
     </div>
   </div>

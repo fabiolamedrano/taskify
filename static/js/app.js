@@ -21,3 +21,15 @@ if (sidebar && overlay && toggle) {
 document.querySelectorAll('select[data-autosubmit]').forEach((select) => {
   select.addEventListener('change', () => select.form.requestSubmit());
 });
+
+// Menú de usuario (<details data-menu>): se cierra al pulsar fuera o con Esc
+document.addEventListener('click', (event) => {
+  document.querySelectorAll('details[data-menu][open]').forEach((menu) => {
+    if (!menu.contains(event.target)) menu.removeAttribute('open');
+  });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  document.querySelectorAll('details[data-menu][open]').forEach((menu) => menu.removeAttribute('open'));
+});

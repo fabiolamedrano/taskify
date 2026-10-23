@@ -2,99 +2,117 @@
 {% load static %}
 
 {% block content %}
-<div class="flex min-h-screen w-full bg-gray-50">
+<div class="flex min-h-screen w-full">
 
   <!-- Fondo oscuro del menú en móvil -->
   <div id="sidebar-overlay"
        class="pointer-events-none fixed inset-0 z-30 bg-black/50 opacity-0 transition-opacity data-[open=true]:pointer-events-auto data-[open=true]:opacity-100 lg:hidden"></div>
 
-  <!-- Barra lateral: congelada en su lugar en escritorio -->
+  <!-- Barra lateral: tarjeta flotante. El contenedor reserva el espacio; la tarjeta va dentro -->
   <aside id="sidebar"
-         class="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-ink text-white -translate-x-full transition-transform duration-300 data-[open=true]:translate-x-0 lg:translate-x-0 lg:transition-none">
-    <div class="flex items-center gap-3 px-6 py-6"> 
-      <span class="h-9 w-9 rounded-lg bg-brand-700"></span>
-      <span class="text-xl font-bold">Taskify</span>
-    </div>
+         class="fixed inset-y-0 left-0 z-40 w-[17.5rem] -translate-x-full p-3 transition-transform duration-300 data-[open=true]:translate-x-0 lg:translate-x-0 lg:transition-none">
+    <div class="flex h-full flex-col rounded-3xl bg-ink p-4 text-white">
 
-    <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-3">
-      <a href="{% url 'dashboard' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'dashboard' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Dashboard</a>
-      <a href="{% url 'projects:list' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'projects' or request.resolver_match.app_name == 'tasks' and request.resolver_match.url_name != 'mine' and request.resolver_match.url_name != 'my_time' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Proyectos</a>
-      <a href="{% url 'tasks:mine' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'mine' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Mis tareas</a>
-      <a href="{% url 'teams:list' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'teams' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Equipos</a>
-      <a href="{% url 'tasks:my_time' %}"
-         class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.url_name == 'my_time' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Registro de tiempo</a>
-      
-      {% if user.is_admin %}
-        <a href="{% url 'users:list' %}"
-           class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'users' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Usuarios</a>
-        <a href="{% url 'tags:list' %}"
-           class="block rounded-lg px-3 py-2 text-sm font-medium {% if request.resolver_match.app_name == 'tags' %}bg-brand-700 text-white{% else %}text-white/70 hover:bg-white/10{% endif %}">Etiquetas</a>
-      {% endif %}
-    </nav>
+      <div class="flex items-center gap-3 px-2 py-2">
+        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-700">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg>
+        </span>
+        <span class="text-xl font-bold tracking-tight">Taskify</span>
+      </div>
 
-    <div class="border-t border-white/10 px-6 py-4 text-sm">
-      <p class="font-semibold">{{ user.get_full_name|default:user.username }}</p>
-      <p class="text-white/60">{{ user.get_role_display }}</p>
+      <nav class="mt-6 min-h-0 flex-1 space-y-1 overflow-y-auto" aria-label="Principal">
+        <p class="px-4 pb-1 text-xs font-semibold uppercase tracking-wider text-white/40">Menú</p>
+        {% include 'layouts/_nav_link.html' with url_name='dashboard' name='dashboard' label='Dashboard' icon='dashboard' %}
+        {% include 'layouts/_nav_link.html' with url_name='projects:list' name='projects' label='Proyectos' icon='projects' %}
+        {% include 'layouts/_nav_link.html' with url_name='tasks:mine' name='mine' label='Mis tareas' icon='tasks' %}
+        {% include 'layouts/_nav_link.html' with url_name='teams:list' name='teams' label='Equipos' icon='teams' %}
+        {% include 'layouts/_nav_link.html' with url_name='tasks:my_time' name='my_time' label='Registro de tiempo' icon='time' %}
+
+        {% if user.is_admin %}
+          <p class="px-4 pb-1 pt-5 text-xs font-semibold uppercase tracking-wider text-white/40">Administración</p>
+          {% include 'layouts/_nav_link.html' with url_name='users:list' name='users' label='Usuarios' icon='users' %}
+          {% include 'layouts/_nav_link.html' with url_name='tags:list' name='tags' label='Etiquetas' icon='tags' %}
+        {% endif %}
+      </nav>
+
+      <!-- Usuario y menú de sesión -->
+      <div class="mt-3 flex items-center gap-3 rounded-2xl bg-white/5 p-3">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-700 text-sm font-bold">{{ user.username|slice:":2"|upper }}</span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate text-sm font-semibold">{{ user.get_full_name|default:user.username }}</p>
+          <p class="truncate text-xs text-white/60">{{ user.get_role_display }}</p>
+        </div>
+        <details class="relative" data-menu>
+          <summary class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full hover:bg-white/10" aria-label="Menú de usuario">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+          </summary>
+          <div class="absolute bottom-full right-0 mb-2 w-44 rounded-2xl bg-white p-1.5 text-ink shadow-lg">
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button class="w-full rounded-xl px-3 py-2 text-left text-sm font-medium hover:bg-surface">Cerrar sesión</button>
+            </form>
+          </div>
+        </details>
+      </div>
     </div>
   </aside>
 
   <!-- Contenido -->
-  <div class="flex min-w-0 flex-1 flex-col lg:ml-60">
+  <div class="flex min-w-0 flex-1 flex-col lg:ml-[17.5rem]">
 
-    <header class="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-white px-6 py-4">
-      <div class="flex min-w-0 items-center gap-3">
-        <button id="sidebar-toggle" type="button"
-                aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"
-                class="rounded-lg border border-line p-2 hover:bg-surface lg:hidden">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <h1 class="text-xl font-bold">{% block page_title %}{% endblock %}</h1>
-      </div>
-      <div class="flex shrink-0 items-center gap-2">
-        <a href="{% url 'notifications:list' %}"
-           aria-label="Notificaciones{% if unread_notifications_count %}, {{ unread_notifications_count }} sin leer{% endif %}"
-           class="relative rounded-lg border p-2 {% if request.resolver_match.app_name == 'notifications' %}border-brand-700 bg-brand-100{% else %}border-line hover:bg-surface{% endif %}">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-          </svg>
-          {% if unread_notifications_count %}
-            <span class="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-700 px-1 text-xs font-bold text-white">{{ unread_notifications_count }}</span>
-          {% endif %}
-        </a>
+    <header class="sticky top-0 z-20 bg-surface/80 px-3 pt-3 backdrop-blur sm:px-4 lg:px-6">
+      <div class="flex items-center justify-between gap-3 rounded-2xl border border-line/70 bg-white px-3 py-2.5 sm:px-4">
+        <div class="flex min-w-0 items-center gap-3">
+          <button id="sidebar-toggle" type="button"
+                  aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"
+                  class="rounded-xl border border-line p-2 hover:bg-surface lg:hidden">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <h1 class="truncate text-lg font-bold sm:text-xl">{% block page_title %}{% endblock %}</h1>
+        </div>
 
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}
-          <button class="rounded-lg border border-line px-3 py-2 text-sm font-medium hover:bg-surface">Salir</button>
-        </form>
+        <div class="flex shrink-0 items-center gap-2">
+          <form method="get" action="{% url 'projects:list' %}" role="search" class="relative hidden md:block">
+            <label for="global-search" class="sr-only">Buscar proyectos</label>
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="global-search" type="search" name="q" placeholder="Buscar proyectos..."
+                   class="w-56 rounded-full border border-line bg-surface py-2 pl-9 pr-4 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 lg:w-64">
+          </form>
+
+          <a href="{% url 'notifications:list' %}"
+             aria-label="Notificaciones{% if unread_notifications_count %}, {{ unread_notifications_count }} sin leer{% endif %}"
+             class="relative rounded-full border p-2.5 {% if nav_section == 'notifications' %}border-brand-700 bg-brand-100{% else %}border-line hover:bg-surface{% endif %}">
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+            </svg>
+            {% if unread_notifications_count %}
+              <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-700 px-1 text-xs font-bold text-white">{{ unread_notifications_count }}</span>
+            {% endif %}
+          </a>
+        </div>
       </div>
     </header>
 
-    <main class="flex-1 p-6">
+    <main class="flex-1 p-4 sm:p-6">
       {% block page_content %}{% endblock %}
     </main>
-  </div>
-</div>
   </div>
 </div>
 
 <!-- Modal de confirmación reutilizable -->
 <dialog id="confirm-dialog" data-tone="default"
         aria-labelledby="confirm-title" aria-describedby="confirm-message"
-        class="group m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-black/50">
+        class="group m-auto w-[calc(100%-2rem)] max-w-md rounded-3xl border border-line bg-white p-0 text-ink shadow-xl backdrop:bg-black/50">
   <form method="dialog" class="p-6">
     <h2 id="confirm-title" class="text-lg font-bold"></h2>
     <p id="confirm-message" class="mt-2 text-sm text-muted"></p>
     <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
       <button value="cancel" autofocus
-              class="rounded-lg border border-line px-4 py-2 text-sm font-medium hover:bg-surface">Cancelar</button>
+              class="rounded-full border border-line px-5 py-2 text-sm font-medium hover:bg-surface">Cancelar</button>
       <button id="confirm-accept" value="confirm"
-              class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800 group-data-[tone=danger]:bg-red-700 group-data-[tone=danger]:hover:bg-red-800">Confirmar</button>
+              class="rounded-full bg-brand-700 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-800 group-data-[tone=danger]:bg-red-700 group-data-[tone=danger]:hover:bg-red-800">Confirmar</button>
     </div>
   </form>
 </dialog>
@@ -104,7 +122,7 @@
   <div class="fixed inset-x-4 top-4 z-50 flex flex-col gap-2 sm:left-auto sm:right-4 sm:w-96">
     {% for message in messages %}
       <div data-toast {% if message.tags == 'error' %}data-persist role="alert"{% else %}role="status"{% endif %}
-           class="flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg transition-opacity duration-200 {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-teal-200 bg-teal-50 text-teal-900{% endif %}">
+           class="flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm shadow-lg transition-opacity duration-200 {% if message.tags == 'error' %}border-red-200 bg-red-50 text-red-800{% else %}border-teal-200 bg-teal-50 text-teal-900{% endif %}">
         <p class="flex-1">{{ message }}</p>
         <button type="button" data-toast-close aria-label="Cerrar aviso"
                 class="shrink-0 rounded p-0.5 hover:bg-black/5">✕</button>
