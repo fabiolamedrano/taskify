@@ -61,3 +61,37 @@ class SeedCommandTests(TestCase):
         self.seed()
         self.seed('--reset')
         self.assertEqual(Task.objects.count(), 12)
+
+class DashboardChartsTests(WorldMixin, TestCase):
+    def test_week_chart_and_donut(self):
+        today = timezone.localdate()
+        TimeLog.objects.create(task=self.task, user=self.member, date=today, hours=Decimal('4'))
+        make_task(self.project, assigned_user=self.member, status=Task.Status.DONE)
+        self.client.force_login(self.member)
+        context = self.client.get(reverse('dashboard')).context
+
+        today_bar = [day for day in context['week']['days'] if day['is_today']][0]
+        self.assertEqual(today_bar['total'], Decimal('4'))
+        self.assertEqual(context['week']['total'], Decimal('4'))
+        self.assertEqual(context['donut']['total'], 2)
+        self.assertEqual(context['donut']['done_pct'], 50)
+
+    def test_empty_donut(self):
+        self.client.force_login(self.outsider)
+        donut = self.client.get(reverse('dashboard')).context['donut']
+        self.assertEqual(donut, {'total': 0, 'done_pct': 0, 'doing_end': 0})
+
+
+class NavigationSectionTests(WorldMixin, TestCase):
+    def section(self, name, *args):
+        self.client.force_login(self.admin)
+        return self.client.get(reverse(name, args=args)).context['nav_section']
+
+    def test_sections_are_detected(self):
+        self.assertEqual(self.section('dashboard'), 'dashboard')
+        self.assertEqual(self.section('projects:detail', self.project.pk), 'projects')
+        self.assertEqual(self.section('tasks:detail', self.task.pk), 'projects')
+        self.assertEqual(self.section('tasks:mine'), 'mine')
+        self.assertEqual(self.section('tasks:my_time'), 'my_time')
+        self.assertEqual(self.section('teams:list'), 'teams')
+        self.assertEqual(self.section('tags:list'), 'tags')
