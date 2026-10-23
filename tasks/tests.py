@@ -403,3 +403,65 @@ class TagManagementTests(WorldMixin, TestCase):
         self.assertRedirects(self.client.post(url), reverse('tags:list'))
         self.assertFalse(Tag.objects.filter(pk=tag.pk).exists())
         self.assertTrue(Task.objects.filter(pk=self.task.pk).exists())
+
+class MyTasksBoardTests(WorldMixin, TestCase):
+    def get(self, **params):
+        self.client.force_login(self.member)
+        return self.client.get(reverse('tasks:mine'), params)
+
+    def shown(self, response):
+        return [task for group in response.context['groups'] for task in group['tasks']]
+
+    def columns(self, response):
+        return {value: tasks for value, _, tasks in response.context['columns']}
+
+    def test_board_groups_tasks_by_status(self):
+        make_task(self.project, assigned_user=self.member, status=Task.Status.DOING)
+        make_task(self.project, assigned_user=self.member, status=Task.Status.DONE)
+        columns = self.columns(self.get(view='board'))
+        self.assertEqual([len(columns[s]) for s in ('todo', 'doing', 'done')], [1, 1, 1])
+
+    def test_done_column_is_limited_to_the_most_recent(self):
+        for _ in range(10):
+            make_task(self.project, assigned_user=self.member, status=Task.Status.DONE)
+        response = self.get(view='board')
+        self.assertEqual(len(self.columns(response)['done']), 8)
+        self.assertEqual(response.context['done_hidden'], 2)
+
+    def test_cards_use_the_api_and_show_subtask_progress(self):
+        Subtask.objects.create(task=self.task, title='A', is_completed=True)
+        Subtask.objects.create(task=self.task, title='B')
+        response = self.get(view='board')
+        self.assertContains(response, reverse('api:task-detail', args=[self.task.pk]))
+        card = self.columns(response)['todo'][0]
+        self.assertEqual((card.subtask_total, card.subtask_done, card.subtask_percent), (2, 1, 50))
+
+    def test_due_filter(self):
+        today = timezone.localdate()
+        late = make_task(self.project, assigned_user=self.member, due_date=today - timedelta(days=1))
+        soon = make_task(self.project, assigned_user=self.member, due_date=today + timedelta(days=3))
+        make_task(self.project, assigned_user=self.member, due_date=today + timedelta(days=30))
+        self.assertEqual(self.shown(self.get(due='overdue')), [late])
+        self.assertEqual(self.shown(self.get(due='week')), [soon])
+        self.assertEqual(len(self.shown(self.get(due='inventado'))), 4)
+
+    def test_stats_ignore_the_filters(self):
+        make_task(self.project, assigned_user=self.member, status=Task.Status.DONE)
+        context = self.get(priority='high').context
+        self.assertEqual(context['total'], 0)
+        self.assertEqual((context['stats']['open'], context['stats']['done']), (1, 1))
+
+    def test_view_toggle_and_search_keep_the_other_filters(self):
+        context = self.get(view='board', priority='high', q='x').context
+        options = {option['label']: option for option in context['view_options']}
+        self.assertTrue(options['Tablero']['active'])
+        self.assertNotIn('view=board', options['Lista']['url'])
+        self.assertIn('priority=high', options['Lista']['url'])
+        self.assertEqual(sorted(context['hidden_params']), [('priority', 'high'), ('view', 'board')])
+        self.assertTrue(context['has_filters'])
+
+    def test_client_gets_a_read_only_board(self):
+        make_task(self.project, assigned_user=self.client_user)
+        self.client.force_login(self.client_user)
+        context = self.client.get(reverse('tasks:mine'), {'view': 'board'}).context
+        self.assertFalse(context['can_move'])

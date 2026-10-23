@@ -313,53 +313,104 @@ class AttachmentDeleteView(ChildDeleteView):
 
 class MyTasksView(LoginRequiredMixin, TemplateView):
     template_name = 'tasks/my_tasks.html'
+    DONE_LIMIT = 8  # en el tablero, «Hecho» muestra solo las más recientes
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         today = timezone.localdate()
+        week_end = today + timedelta(days=7)
         params = self.request.GET
+        not_done = ~Q(status=Task.Status.DONE)
 
-        tasks = Task.objects.filter(assigned_user=user)
-
-        status = params.get('status', '')
-        if status == 'all':
-            pass
-        elif status in Task.Status.values:
-            tasks = tasks.filter(status=status)
-        else:
-            status = ''
-            tasks = tasks.exclude(status=Task.Status.DONE)
-
+        # `mode` y no `view`: TemplateView ya usa `view` en el contexto
+        mode = 'board' if params.get('view') == 'board' else 'list'
         priority = params.get('priority', '')
-        if priority in Task.Priority.values:
-            tasks = tasks.filter(priority=priority)
-        else:
-            priority = ''
-
+        priority = priority if priority in Task.Priority.values else ''
+        due = params.get('due', '')
+        due = due if due in ('overdue', 'week') else ''
         search = params.get('q', '').strip()
+
+        mine = Task.objects.filter(assigned_user=user)
+
+        # Las cifras de arriba no dependen de los filtros
+        stats = mine.aggregate(
+            open=Count('id', filter=not_done),
+            due_week=Count('id', filter=not_done & Q(due_date__range=(today, week_end))),
+            overdue=Count('id', filter=not_done & Q(due_date__lt=today)),
+            done=Count('id', filter=Q(status=Task.Status.DONE)),
+        )
+
+        tasks = mine
+        if priority:
+            tasks = tasks.filter(priority=priority)
+        if due == 'overdue':
+            tasks = tasks.filter(not_done, due_date__lt=today)
+        elif due == 'week':
+            tasks = tasks.filter(not_done, due_date__range=(today, week_end))
         if search:
             tasks = tasks.filter(title__icontains=search)
 
-        tasks = list(
+        tasks = (
             tasks.select_related('project')
             .prefetch_related('tags')
-            .order_by('project__name', F('due_date').asc(nulls_last=True), 'id')
+            .annotate(
+                subtask_total=Count('subtasks', distinct=True),
+                subtask_done=Count('subtasks', filter=Q(subtasks__is_completed=True), distinct=True),
+                comment_total=Count('comments', distinct=True),
+            )
         )
 
-        groups = []
-        for _, items in groupby(tasks, key=attrgetter('project_id')):
-            items = list(items)
-            groups.append({'project': items[0].project, 'tasks': items})
+        status = ''
+        if mode == 'list':
+            # '' = pendientes (por defecto), 'all' = todas, o un estado concreto
+            status = params.get('status', '')
+            if status == 'all':
+                pass
+            elif status in Task.Status.values:
+                tasks = tasks.filter(status=status)
+            else:
+                status = ''
+                tasks = tasks.exclude(status=Task.Status.DONE)
+            tasks = tasks.order_by(
+                'project__name', 'project_id', F('due_date').asc(nulls_last=True), 'id',
+            )
+        else:
+            tasks = tasks.order_by(F('due_date').asc(nulls_last=True), 'id')
 
-        week_end = today + timedelta(days=7)
+        rows = list(tasks)
+        for task in rows:
+            task.subtask_percent = (
+                round(100 * task.subtask_done / task.subtask_total) if task.subtask_total else 0
+            )
+
+        groups, columns, done_hidden = [], [], 0
+        if mode == 'board':
+            by_status = {value: [] for value, _ in Task.Status.choices}
+            for task in rows:
+                by_status[task.status].append(task)
+            done_rows = sorted(by_status['done'], key=attrgetter('updated_at'), reverse=True)
+            by_status['done'] = done_rows[:self.DONE_LIMIT]
+            done_hidden = len(done_rows) - len(by_status['done'])
+            columns = [(value, label, by_status[value]) for value, label in Task.Status.choices]
+        else:
+            # El queryset ya viene ordenado por proyecto, así que groupby agrupa bien
+            for _, items in groupby(rows, key=attrgetter('project_id')):
+                items = list(items)
+                groups.append({'project': items[0].project, 'tasks': items})
+
         context.update(
+            mode=mode,
+            stats=stats,
+            total=len(rows),
+            overdue_count=stats['overdue'],
+            due_week_count=stats['due_week'],
             groups=groups,
-            total=len(tasks),
-            overdue_count=sum(1 for task in tasks if task.is_overdue),
-            due_week_count=sum(
-                1 for task in tasks
-                if task.status != Task.Status.DONE and task.due_date and today <= task.due_date <= week_end
+            columns=columns,
+            done_hidden=done_hidden,
+            view_options=filter_options(
+                self.request, 'view', [('board', 'Tablero')],
+                'board' if mode == 'board' else '', all_label='Lista',
             ),
             status_options=filter_options(
                 self.request, 'status', [*Task.Status.choices, ('all', 'Todas')],
@@ -368,9 +419,20 @@ class MyTasksView(LoginRequiredMixin, TemplateView):
             priority_options=filter_options(
                 self.request, 'priority', Task.Priority.choices, priority, all_label='Todas',
             ),
-            current_status=status,
-            current_priority=priority,
+            due_options=filter_options(
+                self.request, 'due', [('overdue', 'Vencidas'), ('week', 'Esta semana')],
+                due, all_label='Todas',
+            ),
             q=search,
+            has_filters=bool(search or priority or due or status),
+            clear_url=f'{self.request.path}?view=board' if mode == 'board' else self.request.path,
+            hidden_params=[
+                (key, value) for key, value in params.items()
+                if key not in ('q', 'page') and value
+            ],
+            statuses=Task.Status.choices,
+            can_move=not user.is_client,
+            today=today,
         )
         return context
 
