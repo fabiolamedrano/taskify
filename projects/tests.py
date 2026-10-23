@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 
-from core.factories import WorldMixin, make_task, make_user
+from core.factories import WorldMixin, make_project, make_task, make_user
 from tasks.models import Task
 
 from .models import Project
@@ -130,3 +130,20 @@ class ProjectViewTests(WorldMixin, TestCase):
         self.assertRedirects(self.client.post(url), reverse('projects:list'))
         self.assertFalse(Project.objects.filter(pk=self.project.pk).exists())
         self.assertFalse(Task.objects.filter(pk=self.task.pk).exists())
+
+class ProjectListFilterTests(WorldMixin, TestCase):
+    def test_status_chips_show_counts_and_keep_the_search(self):
+        make_project(self.leader, self.team, name='Pausado web', status=Project.Status.PAUSED)
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('projects:list'), {'q': 'web'})
+        options = {option['label']: option for option in response.context['status_options']}
+        self.assertEqual(options['Todos']['count'], 1)
+        self.assertEqual(options['Pausado']['count'], 1)
+        self.assertEqual(options['Activo']['count'], 0)
+        self.assertIn('q=web', options['Pausado']['url'])
+
+    def test_clearing_the_search_keeps_the_status(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('projects:list'), {'q': 'web', 'status': 'paused'})
+        self.assertEqual(response.context['clear_search_url'], '?status=paused')
+        self.assertEqual(response.context['current_status'], 'paused')

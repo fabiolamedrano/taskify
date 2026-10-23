@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import F, Sum
+from django.db.models import Count, F, Sum
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -18,29 +18,50 @@ class ProjectListView(LoginRequiredMixin, QueryStringMixin, ListView):
     context_object_name = 'projects'
     paginate_by = 12
 
-    def get_queryset(self):
-        queryset = (
-            Project.objects.visible_to(self.request.user)
-            .select_related('owner', 'team')
-            .with_task_counts()
-        )
-        status = self.request.GET.get('status')
-        if status in Project.Status.values:
-            queryset = queryset.filter(status=status)
-        search = self.request.GET.get('q', '').strip()
+    def get_search(self):
+        return self.request.GET.get('q', '').strip()
+
+    def get_status(self):
+        status = self.request.GET.get('status', '')
+        return status if status in Project.Status.values else ''
+
+    def get_base_queryset(self):
+        queryset = Project.objects.visible_to(self.request.user)
+        search = self.get_search()
         if search:
             queryset = queryset.filter(name__icontains=search)
+        return queryset
+
+    def get_queryset(self):
+        queryset = self.get_base_queryset().select_related('owner', 'team').with_task_counts()
+        status = self.get_status()
+        if status:
+            queryset = queryset.filter(status=status)
         return queryset.order_by('-created_at', '-id')
+
+    def url_without(self, param):
+        params = self.request.GET.copy()
+        params.pop(param, None)
+        params.pop('page', None)
+        query = params.urlencode()
+        return f'?{query}' if query else self.request.path
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        status = self.request.GET.get('status', '')
-        status = status if status in Project.Status.values else ''
-        context['status_options'] = filter_options(
-            self.request, 'status', Project.Status.choices, status, all_label='Todos',
+        counts = dict(
+            self.get_base_queryset().order_by().values_list('status').annotate(n=Count('pk'))
         )
-        context['current_status'] = status
-        context['q'] = self.request.GET.get('q', '').strip()
+        status = self.get_status()
+        context.update(
+            status_options=filter_options(
+                self.request, 'status', Project.Status.choices, status,
+                all_label='Todos', counts=counts,
+            ),
+            current_status=status,
+            q=self.get_search(),
+            clear_search_url=self.url_without('q'),
+            today=timezone.localdate(),
+        )
         return context
 
 
