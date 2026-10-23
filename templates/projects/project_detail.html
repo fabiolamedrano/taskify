@@ -5,164 +5,258 @@
 {% block page_title %}{{ project.name }}{% endblock %}
 
 {% block page_content %}
-<div class="space-y-6">
+<div class="space-y-5">
 
-  <div class="flex items-center gap-3">
+  <!-- Navegación y acciones -->
+  <div class="flex flex-wrap items-center gap-3">
     <a href="{% url 'projects:list' %}" class="text-sm font-medium text-brand-700 hover:underline">← Proyectos</a>
     {% include 'projects/_status_badge.html' with status=project.status label=project.get_status_display %}
     <div class="ml-auto flex flex-wrap items-center gap-2">
       <a href="{% url 'tasks:board' project.pk %}"
-         class="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-800">Ver tablero</a>
+         class="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-900">Ver tablero</a>
       {% if not user.is_client %}
         <a href="{% url 'tasks:create' project.pk %}"
-           class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">+ Nueva tarea</a>
+           class="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium hover:bg-surface">+ Nueva tarea</a>
       {% endif %}
       {% if user.is_admin or project.owner_id == user.pk %}
         <a href="{% url 'projects:update' project.pk %}"
-           class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Editar</a>
+           class="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium hover:bg-surface">Editar</a>
         <form method="post" action="{% url 'projects:delete' project.pk %}"
               data-confirm="Se eliminarán también sus {{ project.task_count }} tarea{{ project.task_count|pluralize }}, con subtareas, comentarios, adjuntos y registros de tiempo. Esta acción no se puede deshacer."
               data-confirm-title="¿Eliminar «{{ project.name }}»?"
               data-confirm-button="Eliminar proyecto" data-confirm-tone="danger">
           {% csrf_token %}
-          <button class="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</button>
+          <button class="rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50">Eliminar</button>
         </form>
       {% endif %}
     </div>
   </div>
 
-  <div class="grid gap-6 lg:grid-cols-3">
+  <!-- Resumen -->
+  <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+      {% include 'core/_stat_card.html' with label=card.label value=card.value unit=card.unit caption=card.caption href=card.href dark=card.dark alert=card.alert %}
+    {% endfor %}
+  </section>
 
-    <div class="min-w-0 space-y-6 lg:col-span-2">
+  <div class="grid gap-5 xl:grid-cols-3">
 
-      <section class="rounded-xl border border-line bg-white p-5">
-        <h2 class="font-bold">Descripción</h2>
-        <p class="mt-2 text-sm">{{ project.description|default:"Sin descripción." }}</p>
-        {% if project.objective %}
-          <h2 class="mt-5 font-bold">Objetivo</h2>
-          <p class="mt-2 text-sm">{{ project.objective }}</p>
-        {% endif %}
-      </section>
-
-      <section class="rounded-xl border border-line bg-white">
-        <h2 class="border-b border-line px-5 py-4 font-bold">Tareas ({{ project.task_count }})</h2>
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[640px] text-left text-sm">
-            <thead class="text-xs uppercase text-muted">
-              <tr>
-                <th class="px-5 py-3 font-medium">Tarea</th>
-                <th class="px-5 py-3 font-medium">Estado</th>
-                <th class="px-5 py-3 font-medium">Prioridad</th>
-                <th class="px-5 py-3 font-medium">Responsable</th>
-                <th class="px-5 py-3 font-medium">Vence</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-line">
-              {% for task in tasks %}
-                <tr>
-                  <td class="px-5 py-3 font-semibold">
-                    <a href="{% url 'tasks:detail' task.pk %}" class="hover:text-brand-700">{{ task.title }}</a>
-                  </td>
-                  <td class="px-5 py-3">
-                    <span class="rounded-full px-2 py-0.5 text-xs font-medium
-                      {% if task.status == 'done' %}bg-teal-100 text-teal-800
-                      {% elif task.status == 'doing' %}bg-brand-100 text-brand-800
-                      {% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
-                  </td>
-                  <td class="px-5 py-3">
-                    <span class="inline-flex items-center gap-1.5">
-                      <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
-                      {{ task.get_priority_display }}
-                    </span>
-                  </td>
-                  <td class="px-5 py-3">
-                    {% if task.assigned_user %}
-                      {{ task.assigned_user.get_full_name|default:task.assigned_user.username }}
-                    {% elif task.assigned_team %}
-                      {{ task.assigned_team.name }} (equipo)
-                    {% else %}
-                      <span class="text-muted">Sin asignar</span>
-                    {% endif %}
-                  </td>
-                  <td class="px-5 py-3">
-                    {% if task.due_date %}
-                      {% if task.due_date < today and task.status != 'done' %}
-                        <span class="font-semibold text-red-700">{{ task.due_date|date:"j M" }} · vencida</span>
-                      {% else %}
-                        {{ task.due_date|date:"j M" }}
-                      {% endif %}
-                    {% else %}
-                      <span class="text-muted">Sin fecha</span>
-                    {% endif %}
-                  </td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="5" class="px-5 py-8 text-center text-muted">Este proyecto aún no tiene tareas.</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    <!-- Columna 1: mis tareas y descripción -->
+    <div class="min-w-0 space-y-5">
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-bold">Mis tareas en este proyecto</h2>
+          {% if not user.is_client %}
+            <a href="{% url 'tasks:create' project.pk %}" aria-label="Nueva tarea"
+               class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-lg hover:bg-surface">+</a>
+          {% endif %}
         </div>
-      </section>
-    </div>
-
-    <aside class="min-w-0 space-y-6">
-
-      <section class="rounded-xl border border-line bg-white p-5">
-        <h2 class="font-bold">Resumen</h2>
-        <div class="mt-3 flex justify-between text-sm">
-          <span class="text-muted">{{ project.done_count }} de {{ project.task_count }} tareas</span>
-          <span class="font-semibold">{{ project.progress }}%</span>
-        </div>
-        <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"
-             aria-label="Progreso del proyecto"
-             aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
-          <div class="h-2 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
-        </div>
-
-        <dl class="mt-5 space-y-3 text-sm">
-          <div class="flex justify-between gap-4">
-            <dt class="text-muted">Responsable</dt>
-            <dd class="font-medium">{{ project.owner.get_full_name|default:project.owner.username }}</dd>
-          </div>
-          <div class="flex justify-between gap-4">
-            <dt class="text-muted">Equipo</dt>
-            <dd class="font-medium">{{ project.team.name|default:"Sin equipo" }}</dd>
-          </div>
-          <div class="flex justify-between gap-4">
-            <dt class="text-muted">Inicio</dt>
-            <dd class="font-medium">{{ project.start_date|date:"j M Y"|default:"—" }}</dd>
-          </div>
-          <div class="flex justify-between gap-4">
-            <dt class="text-muted">Fecha límite</dt>
-            <dd class="font-medium">{{ project.due_date|date:"j M Y"|default:"—" }}</dd>
-          </div>
-          <div class="flex justify-between gap-4">
-            <dt class="text-muted">Presupuesto</dt>
-            <dd class="font-medium">{% if project.budget %}${{ project.budget|floatformat:"2g" }}{% else %}—{% endif %}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section class="rounded-xl border border-line bg-white p-5">
-        <h2 class="font-bold">Horas</h2>
-        <p class="mt-2 text-3xl font-bold">{{ logged_hours|floatformat:"-1" }} h</p>
-        <p class="text-sm text-muted">registradas de {{ estimated_hours|floatformat:"-1" }} h estimadas</p>
-      </section>
-
-      <section class="rounded-xl border border-line bg-white p-5">
-        <h2 class="font-bold">Equipo</h2>
-        <ul class="mt-3 space-y-2 text-sm">
-          {% for member in members %}
-            <li class="flex justify-between gap-4">
-              <span class="font-medium">{{ member.get_full_name|default:member.username }}</span>
-              <span class="text-muted">{{ member.get_role_display }}</span>
+        <ul class="mt-4 space-y-3">
+          {% for task in my_tasks %}
+            <li>
+              <a href="{{ task.get_absolute_url }}"
+                 class="block rounded-2xl p-4 transition hover:-translate-y-0.5 hover:shadow-md {% if task.priority == 'high' %}bg-red-50{% elif task.priority == 'medium' %}bg-amber-50{% else %}bg-teal-50{% endif %}">
+                <p class="font-semibold">{{ task.title }}</p>
+                {% if task.description %}<p class="mt-1 line-clamp-2 text-sm text-muted">{{ task.description }}</p>{% endif %}
+                <div class="mt-3 flex items-center justify-between gap-3 text-xs">
+                  <span class="rounded-full bg-white/80 px-2.5 py-0.5 font-medium">{{ task.get_status_display }} · {{ task.get_priority_display }}</span>
+                  {% if task.is_overdue %}
+                    <span class="font-semibold text-red-700">Vencida · {{ task.due_date|date:"j M" }}</span>
+                  {% elif task.due_date %}
+                    <span class="text-muted">{{ task.due_date|date:"j M" }}</span>
+                  {% endif %}
+                </div>
+              </a>
             </li>
           {% empty %}
-            <li class="text-muted">Sin miembros asignados.</li>
+            <li class="rounded-2xl bg-surface px-4 py-8 text-center text-sm text-muted">No tienes tareas abiertas en este proyecto.</li>
           {% endfor %}
         </ul>
       </section>
-    </aside>
+
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Descripción</h2>
+        <p class="mt-2 whitespace-pre-line text-sm">{{ project.description|default:"Sin descripción." }}</p>
+        {% if project.objective %}
+          <h3 class="mt-5 text-sm font-bold">Objetivo</h3>
+          <p class="mt-1 whitespace-pre-line text-sm">{{ project.objective }}</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <!-- Columna 2: gráficos -->
+    <div class="min-w-0 space-y-5">
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Estado de las tareas</h2>
+        <div class="mt-5 flex flex-col items-center gap-5">
+          <div class="relative h-40 w-40 rounded-full" role="img"
+               aria-label="{{ status_counts.done }} hechas, {{ status_counts.doing }} en curso y {{ status_counts.todo }} por hacer"
+               style="background: conic-gradient(#9C2F52 0 {{ donut.done_pct }}%, #2A1D23 {{ donut.done_pct }}% {{ donut.doing_end }}%, #E5E2E4 {{ donut.doing_end }}% 100%)">
+            <div class="absolute inset-4 flex flex-col items-center justify-center rounded-full bg-white">
+              {% if donut.total %}
+                <span class="text-3xl font-bold">{{ donut.done_pct }}%</span>
+                <span class="text-xs text-muted">hecho</span>
+              {% else %}
+                <span class="px-2 text-center text-xs text-muted">Sin tareas</span>
+              {% endif %}
+            </div>
+          </div>
+          <ul class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+            <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-brand-700"></span>Hecho {{ status_counts.done }}</li>
+            <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-ink"></span>En curso {{ status_counts.doing }}</li>
+            <li class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-line"></span>Por hacer {{ status_counts.todo }}</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="hours" class="scroll-mt-24 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Horas por semana</h2>
+        <p class="text-sm text-muted">Del equipo completo, últimas 6 semanas</p>
+        <div class="mt-5 grid grid-cols-6 gap-2 sm:gap-3">
+          {% for bar in weekly %}
+            <div class="flex min-w-0 flex-col items-center gap-2">
+              <span class="h-4 text-xs font-semibold">{% if bar.total %}{{ bar.total|floatformat:"-1" }}{% endif %}</span>
+              <div class="flex h-32 w-full max-w-[3rem] items-end">
+                {% if bar.total %}
+                  <div class="w-full rounded-full {% if bar.is_current %}bg-brand-700{% else %}bg-ink{% endif %}"
+                       style="height: {{ bar.percent }}%" role="img"
+                       aria-label="Semana del {{ bar.start|date:'j M' }}: {{ bar.total|floatformat:'-1' }} horas"></div>
+                {% else %}
+                  <div class="w-full rounded-full" aria-hidden="true"
+                       style="height: 22%; background-image: repeating-linear-gradient(135deg, #D9D4D7 0 3px, transparent 3px 7px)"></div>
+                {% endif %}
+              </div>
+              <span class="text-xs {% if bar.is_current %}font-bold{% else %}text-muted{% endif %}">{{ bar.start|date:"j M" }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Carga por persona</h2>
+        <ul class="mt-4 space-y-5">
+          {% for row in workload %}
+            <li>
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <span class="truncate font-semibold">{{ row.name }}</span>
+                <span class="shrink-0 text-muted">{{ row.done }} de {{ row.total }}</span>
+              </div>
+              <div class="mt-2 h-2.5 rounded-full bg-line" role="progressbar"
+                   aria-label="Tareas completadas por {{ row.name }}"
+                   aria-valuenow="{{ row.percent }}" aria-valuemin="0" aria-valuemax="100">
+                <div class="h-2.5 rounded-full bg-brand-700" style="width: {{ row.percent }}%"></div>
+              </div>
+            </li>
+          {% empty %}
+            <li class="text-sm text-muted">Este proyecto todavía no tiene tareas.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+
+    <!-- Columna 3: detalles, equipo y comentarios -->
+    <div class="min-w-0 space-y-5">
+      <section id="details" class="scroll-mt-24 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Detalles</h2>
+        <dl class="mt-4 space-y-3 text-sm">
+          <div class="flex justify-between gap-4"><dt class="text-muted">Responsable</dt><dd class="text-right font-medium">{{ project.owner.get_full_name|default:project.owner.username }}</dd></div>
+          <div class="flex justify-between gap-4">
+            <dt class="text-muted">Equipo</dt>
+            <dd class="text-right font-medium">
+              {% if project.team %}<a href="{{ project.team.get_absolute_url }}" class="text-brand-700 hover:underline">{{ project.team.name }}</a>{% else %}Sin equipo{% endif %}
+            </dd>
+          </div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Inicio</dt><dd class="font-medium">{{ project.start_date|date:"j M Y"|default:"—" }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Fecha límite</dt><dd class="font-medium">{{ project.due_date|date:"j M Y"|default:"—" }}</dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-muted">Presupuesto</dt><dd class="font-medium">{% if project.budget %}${{ project.budget|floatformat:"2g" }}{% else %}—{% endif %}</dd></div>
+        </dl>
+      </section>
+
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Equipo</h2>
+        <ul class="mt-4 space-y-3">
+          {% for member in members %}
+            <li class="flex items-center gap-3">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">{{ member.username|slice:":2"|upper }}</span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-semibold">{{ member.get_full_name|default:member.username }}</p>
+                <p class="text-xs text-muted">{{ member.get_role_display }}</p>
+              </div>
+              <span class="shrink-0 rounded-full bg-surface px-2.5 py-1 text-xs text-muted">{{ member.open_tasks }} abierta{{ member.open_tasks|pluralize }}</span>
+            </li>
+          {% empty %}
+            <li class="text-sm text-muted">Sin miembros asignados.</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Comentarios recientes</h2>
+        <ul class="mt-4 space-y-3">
+          {% for comment in comments %}
+            <li class="rounded-2xl bg-surface px-4 py-3">
+              <div class="flex items-center justify-between gap-3 text-xs text-muted">
+                <span class="truncate font-semibold text-ink">{{ comment.author.get_full_name|default:comment.author.username }}</span>
+                <span class="shrink-0">Hace {{ comment.created_at|timesince }}</span>
+              </div>
+              <p class="mt-1 text-sm">{{ comment.content|truncatechars:90 }}</p>
+              <a href="{{ comment.task.get_absolute_url }}#comments" class="mt-1 block truncate text-xs font-medium text-brand-700 hover:underline">{{ comment.task.title }}</a>
+            </li>
+          {% empty %}
+            <li class="py-4 text-center text-sm text-muted">Todavía no hay comentarios.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
   </div>
+
+  <!-- Todas las tareas -->
+  <section id="tasks" class="scroll-mt-24 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-bold">Todas las tareas</h2>
+      {% include 'includes/_filter_chips.html' with options=task_filter aria='estado' %}
+    </div>
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full min-w-[640px] text-left text-sm">
+        <thead class="text-xs uppercase text-muted">
+          <tr>
+            <th class="px-3 py-3 font-medium">Tarea</th>
+            <th class="px-3 py-3 font-medium">Estado</th>
+            <th class="px-3 py-3 font-medium">Prioridad</th>
+            <th class="px-3 py-3 font-medium">Responsable</th>
+            <th class="px-3 py-3 font-medium">Vence</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+          {% for task in tasks %}
+            <tr>
+              <td class="px-3 py-3 font-semibold"><a href="{{ task.get_absolute_url }}" class="hover:text-brand-700">{{ task.title }}</a></td>
+              <td class="px-3 py-3">
+                <span class="rounded-full px-2.5 py-0.5 text-xs font-medium {% if task.status == 'done' %}bg-teal-100 text-teal-800{% elif task.status == 'doing' %}bg-brand-100 text-brand-800{% else %}bg-line text-ink{% endif %}">{{ task.get_status_display }}</span>
+              </td>
+              <td class="px-3 py-3">
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="h-2 w-2 rounded-full {% if task.priority == 'high' %}bg-red-600{% elif task.priority == 'medium' %}bg-amber-500{% else %}bg-teal-600{% endif %}"></span>
+                  {{ task.get_priority_display }}
+                </span>
+              </td>
+              <td class="px-3 py-3">
+                {% if task.assigned_user %}{{ task.assigned_user.get_full_name|default:task.assigned_user.username }}
+                {% elif task.assigned_team %}{{ task.assigned_team.name }} (equipo)
+                {% else %}<span class="text-muted">Sin asignar</span>{% endif %}
+              </td>
+              <td class="px-3 py-3">
+                {% if task.is_overdue %}<span class="font-semibold text-red-700">{{ task.due_date|date:"j M" }} · vencida</span>
+                {% elif task.due_date %}{{ task.due_date|date:"j M" }}
+                {% else %}<span class="text-muted">Sin fecha</span>{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="px-3 py-10 text-center text-muted">No hay tareas con este filtro.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 {% endblock %}
