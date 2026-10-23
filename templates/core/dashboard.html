@@ -149,7 +149,7 @@
                    aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
                 <div class="h-2.5 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
               </div>
-              <p class="mt-1 text-xs text-muted">{{ project.done_count }} de {{ project.task_count }} tareas</p>
+              <p class="mt-1 text-xs text-muted">{{ project.done_count }} de {{ project.task_count }} tarea{{ project.task_count|pluralize }}</p>
             </li>
           {% empty %}
             <li class="text-sm text-muted">Todavía no participas en ningún proyecto.</li>

@@ -2,12 +2,12 @@
   <nav aria-label="Paginación" class="flex items-center justify-between text-sm">
     {% if page_obj.has_previous %}
       <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}"
-         class="rounded-lg border border-line bg-white px-3 py-2 font-medium hover:bg-surface">← Anterior</a>
+         class="rounded-full border border-line/70 bg-white px-4 py-2 font-medium hover:bg-surface">← Anterior</a>
     {% else %}<span></span>{% endif %}
     <span class="text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
     {% if page_obj.has_next %}
       <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}"
-         class="rounded-lg border border-line bg-white px-3 py-2 font-medium hover:bg-surface">Siguiente →</a>
+         class="rounded-full border border-line/70 bg-white px-4 py-2 font-medium hover:bg-surface">Siguiente →</a>
     {% else %}<span></span>{% endif %}
   </nav>
 {% endif %}
