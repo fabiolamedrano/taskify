@@ -1,3 +1,5 @@
+from django.conf import settings
+
 def navigation(request):
     match = request.resolver_match
     if not match:
@@ -12,6 +14,11 @@ def navigation(request):
         section = 'my_time'
     elif app in ('projects', 'tasks'):
         section = 'projects'
+    elif name in ('profile', 'password_change'):
+        section = 'profile'
     else:
         section = app
     return {'nav_section': section}
+
+def site_flags(request):
+    return {'allow_signup': settings.ALLOW_SIGNUP}

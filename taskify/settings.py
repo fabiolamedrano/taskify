@@ -9,6 +9,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ['SECRET_KEY']
 
 DEBUG = os.environ.get('DEBUG') == 'True'
+ALLOW_SIGNUP = os.environ.get('ALLOW_SIGNUP', 'True') == 'True'
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -61,6 +62,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'notifications.context_processors.unread_notifications',
                 'core.context_processors.navigation',
+                'core.context_processors.site_flags',
             ],
         },
     },

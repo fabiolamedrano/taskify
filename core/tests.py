@@ -98,6 +98,10 @@ class NavigationSectionTests(WorldMixin, TestCase):
         self.assertEqual(self.section('teams:list'), 'teams')
         self.assertEqual(self.section('tags:list'), 'tags')
 
+    def test_profile_pages_do_not_highlight_the_admin_users_link(self):
+        self.assertEqual(self.section('users:profile'), 'profile')
+        self.assertEqual(self.section('users:password_change'), 'profile')
+
 class SeedBulkCommandTests(TestCase):
     def run_command(self, *args):
         call_command(
