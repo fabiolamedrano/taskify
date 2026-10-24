@@ -4,11 +4,13 @@ from io import StringIO
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from core.factories import WorldMixin, make_task, make_user
+from projects.models import Project
 from notifications.models import Notification
 from tasks.models import Task, TimeLog
 
@@ -95,3 +97,23 @@ class NavigationSectionTests(WorldMixin, TestCase):
         self.assertEqual(self.section('tasks:my_time'), 'my_time')
         self.assertEqual(self.section('teams:list'), 'teams')
         self.assertEqual(self.section('tags:list'), 'tags')
+
+class SeedBulkCommandTests(TestCase):
+    def run_command(self, *args):
+        call_command(
+            'seed_bulk', '--users', '6', '--teams', '2', '--projects', '3', '--tasks', '5',
+            *args, stdout=StringIO(),
+        )
+
+    def test_generates_data_refuses_duplicates_and_resets(self):
+        self.run_command()
+        self.assertEqual(User.objects.filter(username__startswith='demo_').count(), 8)
+        self.assertEqual(Project.objects.count(), 3)
+        self.assertGreaterEqual(Task.objects.count(), 15)
+
+        with self.assertRaises(CommandError):
+            self.run_command()
+
+        self.run_command('--reset')
+        self.assertEqual(Project.objects.count(), 3)
+        self.assertEqual(User.objects.filter(username__startswith='demo_').count(), 8)
