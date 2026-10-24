@@ -152,7 +152,10 @@
               <p class="mt-1 text-xs text-muted">{{ project.done_count }} de {{ project.task_count }} tarea{{ project.task_count|pluralize }}</p>
             </li>
           {% empty %}
-            <li class="text-sm text-muted">Todavía no participas en ningún proyecto.</li>
+            <li class="text-sm text-muted">
+              Todavía no participas en ningún proyecto.
+              {% if not user.is_client %}<a href="{% url 'projects:create' %}" class="font-medium text-brand-700 hover:underline">Crea el primero</a>.{% endif %}
+            </li>
           {% endfor %}
         </ul>
       </section>

@@ -1,0 +1,5 @@
+{% if person.avatar %}
+  <img src="{{ person.avatar.url }}" alt="" class="{{ size }} shrink-0 rounded-full object-cover">
+{% else %}
+  <span class="{{ size }} {{ text }} flex shrink-0 items-center justify-center rounded-full bg-brand-700 font-bold text-white" aria-hidden="true">{{ person.username|slice:":2"|upper }}</span>
+{% endif %}

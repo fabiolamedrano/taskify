@@ -1,43 +1,39 @@
-{% extends 'base.html' %}
+{% extends 'layouts/auth.html' %}
 
 {% block title %}Iniciar sesión · Taskify{% endblock %}
 
-{% block content %}
-<main class="flex min-h-screen items-center justify-center px-4">
-  <div class="w-full max-w-sm rounded-2xl border border-line bg-white p-8 shadow-sm">
-    <h1 class="text-2xl font-bold">Taskify</h1>
-    <p class="mt-1 text-sm text-muted">Inicia sesión para continuar</p>
+{% block auth_content %}
+<h1 class="text-2xl font-bold">Inicia sesión</h1>
+<p class="mt-1 text-sm text-muted">Entra para ver tus proyectos y tareas.</p>
 
-    <form method="post" class="mt-6 space-y-4">
-      {% csrf_token %}
+<form method="post" class="mt-6 space-y-4">
+  {% csrf_token %}
+  {% if form.errors %}
+    <p role="alert" class="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700">
+      {% for error in form.non_field_errors %}{{ error }}{% empty %}Revisa los datos e inténtalo de nuevo.{% endfor %}
+    </p>
+  {% endif %}
 
-      {% if form.errors %}
-        <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          Usuario o contraseña incorrectos.
-        </p>
-      {% endif %}
-
-      <div>
-        <label for="id_username" class="block text-sm font-medium">Usuario</label>
-        <input type="text" name="username" id="id_username" required autofocus
-               autocomplete="username"
-               class="mt-1 w-full rounded-lg border border-line px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-      </div>
-
-      <div>
-        <label for="id_password" class="block text-sm font-medium">Contraseña</label>
-        <input type="password" name="password" id="id_password" required
-               autocomplete="current-password"
-               class="mt-1 w-full rounded-lg border border-line px-3 py-2 focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
-      </div>
-
-      <input type="hidden" name="next" value="{{ next }}">
-
-      <button type="submit"
-              class="w-full rounded-lg bg-brand-700 py-2.5 font-semibold text-white hover:bg-brand-800">
-        Entrar
-      </button>
-    </form>
+  <div>
+    <label for="id_username" class="mb-1 block text-sm font-medium">Usuario</label>
+    <input type="text" name="username" id="id_username" required autofocus autocomplete="username"
+           class="w-full rounded-xl border border-line px-4 py-2.5 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
   </div>
-</main>
+  <div>
+    <label for="id_password" class="mb-1 block text-sm font-medium">Contraseña</label>
+    <input type="password" name="password" id="id_password" required autocomplete="current-password"
+           class="w-full rounded-xl border border-line px-4 py-2.5 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+  </div>
+
+  <input type="hidden" name="next" value="{{ next }}">
+  <button class="w-full rounded-full bg-brand-700 py-3 text-sm font-semibold text-white hover:bg-brand-800">Entrar</button>
+</form>
+{% endblock %}
+
+{% block auth_footer %}
+  {% if allow_signup %}
+    <p class="mt-6 text-center text-sm text-muted">
+      ¿No tienes cuenta? <a href="{% url 'signup' %}" class="font-semibold text-brand-700 hover:underline">Crear cuenta</a>
+    </p>
+  {% endif %}
 {% endblock %}

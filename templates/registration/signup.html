@@ -1,0 +1,25 @@
+{% extends 'layouts/auth.html' %}
+
+{% block title %}Crear cuenta · Taskify{% endblock %}
+
+{% block auth_content %}
+<h1 class="text-2xl font-bold">Crea tu cuenta</h1>
+<p class="mt-1 text-sm text-muted">Solo tarda un minuto.</p>
+
+<form method="post" class="mt-6 space-y-4">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div role="alert" class="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  {% include 'includes/_form_fields.html' %}
+
+  <button class="w-full rounded-full bg-brand-700 py-3 text-sm font-semibold text-white hover:bg-brand-800">Crear cuenta</button>
+</form>
+{% endblock %}
+
+{% block auth_footer %}
+  <p class="mt-6 text-center text-sm text-muted">
+    ¿Ya tienes cuenta? <a href="{% url 'login' %}" class="font-semibold text-brand-700 hover:underline">Inicia sesión</a>
+  </p>
+{% endblock %}
