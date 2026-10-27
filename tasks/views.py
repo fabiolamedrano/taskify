@@ -28,35 +28,70 @@ class BoardView(LoginRequiredMixin, DetailView):
     template_name = 'tasks/board.html'
     context_object_name = 'project'
     pk_url_kwarg = 'project_pk'
+    DONE_LIMIT = 12  # «Hecho» muestra solo las más recientes
 
     def get_queryset(self):
-        return Project.objects.visible_to(self.request.user)
+        return (
+            Project.objects.visible_to(self.request.user)
+            .select_related('owner', 'team')
+            .with_task_counts()
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        params = self.request.GET
+
+        assigned = params.get('assigned', '')
+        assigned = assigned if assigned in ('mine', 'none') else ''
+        priority = params.get('priority', '')
+        priority = priority if priority in Task.Priority.values else ''
+
+        tasks = self.object.tasks.all()
+        if assigned == 'mine':
+            tasks = tasks.filter(assigned_user=user)
+        elif assigned == 'none':
+            tasks = tasks.filter(assigned_user__isnull=True)
+        if priority:
+            tasks = tasks.filter(priority=priority)
 
         tasks = (
-            self.object.tasks
-            .select_related('assigned_user', 'assigned_team')
+            tasks.select_related('assigned_user', 'assigned_team')
             .prefetch_related('tags')
             .annotate(
                 subtask_total=Count('subtasks', distinct=True),
                 subtask_done=Count('subtasks', filter=Q(subtasks__is_completed=True), distinct=True),
                 comment_total=Count('comments', distinct=True),
             )
-            .order_by(F('due_date').asc(nulls_last=True))
+            .order_by(F('due_date').asc(nulls_last=True), 'id')
         )
 
+        # Una sola consulta; las tareas se reparten por estado en Python
         by_status = {value: [] for value, _ in Task.Status.choices}
         for task in tasks:
+            task.subtask_percent = (
+                round(100 * task.subtask_done / task.subtask_total) if task.subtask_total else 0
+            )
             by_status[task.status].append(task)
 
-        context['columns'] = [
-            (value, label, by_status[value]) for value, label in Task.Status.choices
-        ]
-        context['statuses'] = Task.Status.choices
-        context['can_move'] = not self.request.user.is_client
-        context['today'] = timezone.localdate()
+        done_rows = sorted(by_status['done'], key=attrgetter('updated_at'), reverse=True)
+        by_status['done'] = done_rows[:self.DONE_LIMIT]
+
+        context.update(
+            columns=[(value, label, by_status[value]) for value, label in Task.Status.choices],
+            done_hidden=len(done_rows) - len(by_status['done']),
+            statuses=Task.Status.choices,
+            assigned_options=filter_options(
+                self.request, 'assigned', [('mine', 'Mías'), ('none', 'Sin asignar')],
+                assigned, all_label='Todas',
+            ),
+            priority_options=filter_options(
+                self.request, 'priority', Task.Priority.choices, priority, all_label='Todas',
+            ),
+            has_filters=bool(assigned or priority),
+            can_move=not user.is_client,
+            today=timezone.localdate(),
+        )
         return context
 
 
