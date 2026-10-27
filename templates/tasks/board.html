@@ -3,44 +3,83 @@
 
 {% block title %}Tablero · {{ project.name }} · Taskify{% endblock %}
 
-{% block page_title %}{{ project.name }}{% endblock %}
+{% block page_title %}Tablero{% endblock %}
 
 {% block page_content %}
-<div class="space-y-4">
+<div class="space-y-5">
 
-  <div class="flex items-center gap-3">
-    <a href="{% url 'projects:detail' project.pk %}" class="text-sm font-medium text-brand-700 hover:underline">← Detalle del proyecto</a>
-    {% if not can_move %}
-      <span class="rounded-full bg-line px-2.5 py-0.5 text-xs font-semibold">Solo lectura</span>
+  <!-- Encabezado del proyecto -->
+  <section class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+    <div class="min-w-0">
+      <a href="{% url 'projects:detail' project.pk %}" class="text-sm font-medium text-brand-700 hover:underline">← Detalle del proyecto</a>
+      <h2 class="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">{{ project.name }}</h2>
+      <p class="mt-1 text-sm text-muted">
+        {% if project.team %}{{ project.team.name }}{% else %}Sin equipo{% endif %}
+        · {% if project.due_date %}vence el {{ project.due_date|date:"j M Y" }}{% else %}sin fecha límite{% endif %}
+      </p>
+    </div>
+
+    <div class="flex w-full flex-wrap items-center gap-4 sm:w-auto">
+      <div class="min-w-40 flex-1 sm:w-48 sm:flex-none">
+        <div class="flex justify-between text-xs text-muted">
+          <span>{{ project.done_count }} de {{ project.task_count }} tarea{{ project.task_count|pluralize }}</span>
+          <span class="font-semibold text-ink">{{ project.progress }}%</span>
+        </div>
+        <div class="mt-1.5 h-2.5 rounded-full bg-line" role="progressbar"
+             aria-label="Progreso del proyecto"
+             aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="h-2.5 rounded-full bg-brand-700" style="width: {{ project.progress }}%"></div>
+        </div>
+      </div>
+      {% if can_move %}
+        <a href="{% url 'tasks:create' project.pk %}"
+           class="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-900">+ Nueva tarea</a>
+      {% else %}
+        <span class="rounded-full bg-line px-3 py-1 text-xs font-semibold">Solo lectura</span>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Filtros -->
+  <div class="flex flex-wrap items-end gap-x-8 gap-y-4">
+    {% include 'includes/_filter_chips.html' with options=assigned_options label='Responsable' %}
+    {% include 'includes/_filter_chips.html' with options=priority_options label='Prioridad' %}
+    {% if has_filters %}
+      <a href="{% url 'tasks:board' project.pk %}"
+         class="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Quitar filtros</a>
     {% endif %}
   </div>
 
-  <p id="board-error" role="alert"
-     class="hidden rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
+  <p id="board-error" role="alert" class="hidden rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700">
     No se pudo mover la tarea. Inténtalo de nuevo.
   </p>
 
   <div id="board" data-csrf="{{ csrf_token }}" data-can-move="{{ can_move|yesno:'true,false' }}"
-       class="grid items-start gap-4 md:grid-cols-3">
-    {% for value, label, tasks in columns %}
-      <section class="rounded-xl border border-line bg-surface p-3" aria-label="{{ label }}">
-        <h2 class="flex items-center justify-between px-1 pb-3 font-bold">
-          {{ label }}
+       class="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
+    {% for value, label, items in columns %}
+      <section class="min-w-0 rounded-3xl border border-line/70 bg-white/60 p-3" aria-label="{{ label }}">
+        <h3 class="flex items-center justify-between px-2 pb-3 pt-1">
+          <span class="rounded-full px-3 py-1 text-sm font-bold {% if value == 'doing' %}bg-brand-100 text-brand-900{% elif value == 'done' %}bg-teal-100 text-teal-800{% else %}bg-line text-ink{% endif %}">{{ label }}</span>
           <span class="flex items-center gap-2">
-            <span data-count-for="{{ value }}"
-                  class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold">{{ tasks|length }}</span>
+            <span data-count-for="{{ value }}" class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold">{{ items|length }}</span>
             {% if can_move %}
               <a href="{% url 'tasks:create' project.pk %}?status={{ value }}"
                  aria-label="Agregar tarea a {{ label }}"
-                 class="rounded px-1.5 text-lg leading-none text-muted hover:bg-white hover:text-brand-700">+</a>
+                 class="flex h-7 w-7 items-center justify-center rounded-full border border-line bg-white text-lg leading-none text-muted hover:text-brand-700">+</a>
             {% endif %}
           </span>
-        </h2>
+        </h3>
         <ul data-column="{{ value }}" class="min-h-24 space-y-3">
-          {% for task in tasks %}
-            {% include 'tasks/_card.html' %}
+          {% for task in items %}
+            {% include 'tasks/_task_card.html' with hide_project=True show_assignee=True %}
           {% endfor %}
         </ul>
+        {% if value == 'done' and done_hidden %}
+          <a href="{% url 'projects:detail' project.pk %}?status=done#tasks"
+             class="mt-3 block rounded-2xl px-3 py-2 text-center text-xs font-medium text-muted hover:bg-white">
+            Y {{ done_hidden }} más · Ver todas las hechas
+          </a>
+        {% endif %}
       </section>
     {% endfor %}
   </div>
