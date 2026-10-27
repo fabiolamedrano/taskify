@@ -465,3 +465,96 @@ class MyTasksBoardTests(WorldMixin, TestCase):
         self.client.force_login(self.client_user)
         context = self.client.get(reverse('tasks:mine'), {'view': 'board'}).context
         self.assertFalse(context['can_move'])
+
+class ProjectBoardRedesignTests(WorldMixin, TestCase):
+    def get(self, user=None, **params):
+        self.client.force_login(user or self.member)
+        return self.client.get(reverse('tasks:board', args=[self.project.pk]), params)
+
+    def cards(self, response):
+        return [task for _, _, tasks in response.context['columns'] for task in tasks]
+
+    def test_assignment_filter(self):
+        free = make_task(self.project, title='Libre')
+        make_task(self.project, title='Ajena', assigned_user=self.leader)
+        self.assertEqual(self.cards(self.get(assigned='mine')), [self.task])
+        self.assertEqual(self.cards(self.get(assigned='none')), [free])
+        self.assertEqual(len(self.cards(self.get(assigned='inventado'))), 3)
+
+    def test_priority_filter_and_filters_flag(self):
+        high = make_task(self.project, priority=Task.Priority.HIGH)
+        response = self.get(priority='high')
+        self.assertEqual(self.cards(response), [high])
+        self.assertTrue(response.context['has_filters'])
+        self.assertFalse(self.get().context['has_filters'])
+
+    def test_done_column_is_limited_to_the_most_recent(self):
+        for _ in range(14):
+            make_task(self.project, status=Task.Status.DONE)
+        response = self.get()
+        columns = {value: tasks for value, _, tasks in response.context['columns']}
+        self.assertEqual((len(columns['done']), response.context['done_hidden']), (12, 2))
+        self.assertContains(response, '?status=done#tasks')
+
+    def test_cards_use_the_api_and_show_the_assignee(self):
+        make_task(self.project, title='Libre')
+        response = self.get()
+        self.assertContains(response, reverse('api:task-detail', args=[self.task.pk]))
+        self.assertContains(response, 'Sin asignar')
+
+    def test_cards_show_subtask_progress(self):
+        Subtask.objects.create(task=self.task, title='A', is_completed=True)
+        Subtask.objects.create(task=self.task, title='B')
+        card = self.cards(self.get())[0]
+        self.assertEqual((card.subtask_total, card.subtask_done, card.subtask_percent), (2, 1, 50))
+
+class TaskDetailRedesignTests(WorldMixin, TestCase):
+    def get(self, user=None, task=None):
+        self.client.force_login(user or self.member)
+        return self.client.get(reverse('tasks:detail', args=[(task or self.task).pk]))
+
+    def test_cards_summarize_subtasks_hours_and_comments(self):
+        Subtask.objects.create(task=self.task, title='A', is_completed=True)
+        Subtask.objects.create(task=self.task, title='B')
+        TimeLog.objects.create(
+            task=self.task, user=self.member, date=timezone.localdate(), hours=Decimal('2.5'),
+        )
+        Comment.objects.create(task=self.task, author=self.leader, content='Hola')
+        cards = self.get().context['cards']
+        self.assertEqual((cards[0]['value'], cards[0]['caption']), (50, '1 de 2 subtareas'))
+        self.assertEqual((cards[1]['value'], cards[1]['caption']), ('2.5', 'Sin estimación'))
+        self.assertEqual(cards[3]['value'], 1)
+
+    def test_cards_for_a_task_without_data(self):
+        cards = self.get().context['cards']
+        self.assertEqual((cards[0]['value'], cards[0]['caption']), ('—', 'Sin subtareas'))
+        self.assertEqual(cards[1]['value'], '0')
+        self.assertEqual(cards[2]['value'], '—')
+
+    def test_deadline_card_states(self):
+        today = timezone.localdate()
+        cases = [
+            (today - timedelta(days=2), Task.Status.TODO, 2, True),
+            (today, Task.Status.TODO, 'Hoy', False),
+            (today + timedelta(days=5), Task.Status.TODO, 5, False),
+            (today - timedelta(days=2), Task.Status.DONE, 'Hecha', False),
+        ]
+        for due, status, value, alert in cases:
+            task = make_task(self.project, due_date=due, status=status)
+            card = self.get(task=task).context['cards'][2]
+            self.assertEqual((card['value'], card['alert']), (value, alert))
+
+    def test_time_is_broken_down_by_person(self):
+        today = timezone.localdate()
+        TimeLog.objects.create(task=self.task, user=self.member, date=today, hours=3)
+        TimeLog.objects.create(task=self.task, user=self.leader, date=today, hours=1)
+        rows = self.get().context['time_by_person']
+        self.assertEqual([(row['name'], row['percent']) for row in rows], [('member', 75), ('leader', 25)])
+
+    def test_the_page_offers_the_status_switch_and_respects_read_only(self):
+        response = self.get()
+        self.assertContains(response, 'id="status-switch"')
+        self.assertContains(response, reverse('api:task-detail', args=[self.task.pk]))
+        read_only = self.get(self.client_user)
+        self.assertFalse(read_only.context['can_edit'])
+        self.assertContains(read_only, 'Solo lectura')

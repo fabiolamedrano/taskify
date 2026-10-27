@@ -13,6 +13,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from core.charts import build_donut
 from core.mixins import QueryStringMixin, filter_options
 from core.permissions import NotClientMixin, OwnerOrAdminMixin
+from core.formatting import plain, plural
 from tasks.models import Comment, Task, TimeLog
 
 from .forms import ProjectForm
@@ -69,15 +70,6 @@ class ProjectListView(LoginRequiredMixin, QueryStringMixin, ListView):
             today=timezone.localdate(),
         )
         return context
-
-
-def plain(number):
-    """Un Decimal sin ceros sobrantes: 2.50 -> '2.5', 120 -> '120'."""
-    return format(number.normalize(), 'f')
-
-
-def plural(count, word):
-    return f'{count} {word}{"" if count == 1 else "s"}'
 
 
 class ProjectDetailView(LoginRequiredMixin, DetailView):

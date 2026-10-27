@@ -12,11 +12,13 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.formats import date_format
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, TemplateView, UpdateView
 
 from core.permissions import NotClientMixin, OwnerOrAdminMixin
 from core.mixins import filter_options
+from core.formatting import plain, plural
 from notifications.models import Notification
 from projects.models import Project
 
@@ -28,35 +30,70 @@ class BoardView(LoginRequiredMixin, DetailView):
     template_name = 'tasks/board.html'
     context_object_name = 'project'
     pk_url_kwarg = 'project_pk'
+    DONE_LIMIT = 12  # «Hecho» muestra solo las más recientes
 
     def get_queryset(self):
-        return Project.objects.visible_to(self.request.user)
+        return (
+            Project.objects.visible_to(self.request.user)
+            .select_related('owner', 'team')
+            .with_task_counts()
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        user = self.request.user
+        params = self.request.GET
+
+        assigned = params.get('assigned', '')
+        assigned = assigned if assigned in ('mine', 'none') else ''
+        priority = params.get('priority', '')
+        priority = priority if priority in Task.Priority.values else ''
+
+        tasks = self.object.tasks.all()
+        if assigned == 'mine':
+            tasks = tasks.filter(assigned_user=user)
+        elif assigned == 'none':
+            tasks = tasks.filter(assigned_user__isnull=True)
+        if priority:
+            tasks = tasks.filter(priority=priority)
 
         tasks = (
-            self.object.tasks
-            .select_related('assigned_user', 'assigned_team')
+            tasks.select_related('assigned_user', 'assigned_team')
             .prefetch_related('tags')
             .annotate(
                 subtask_total=Count('subtasks', distinct=True),
                 subtask_done=Count('subtasks', filter=Q(subtasks__is_completed=True), distinct=True),
                 comment_total=Count('comments', distinct=True),
             )
-            .order_by(F('due_date').asc(nulls_last=True))
+            .order_by(F('due_date').asc(nulls_last=True), 'id')
         )
 
+        # Una sola consulta; las tareas se reparten por estado en Python
         by_status = {value: [] for value, _ in Task.Status.choices}
         for task in tasks:
+            task.subtask_percent = (
+                round(100 * task.subtask_done / task.subtask_total) if task.subtask_total else 0
+            )
             by_status[task.status].append(task)
 
-        context['columns'] = [
-            (value, label, by_status[value]) for value, label in Task.Status.choices
-        ]
-        context['statuses'] = Task.Status.choices
-        context['can_move'] = not self.request.user.is_client
-        context['today'] = timezone.localdate()
+        done_rows = sorted(by_status['done'], key=attrgetter('updated_at'), reverse=True)
+        by_status['done'] = done_rows[:self.DONE_LIMIT]
+
+        context.update(
+            columns=[(value, label, by_status[value]) for value, label in Task.Status.choices],
+            done_hidden=len(done_rows) - len(by_status['done']),
+            statuses=Task.Status.choices,
+            assigned_options=filter_options(
+                self.request, 'assigned', [('mine', 'Mías'), ('none', 'Sin asignar')],
+                assigned, all_label='Todas',
+            ),
+            priority_options=filter_options(
+                self.request, 'priority', Task.Priority.choices, priority, all_label='Todas',
+            ),
+            has_filters=bool(assigned or priority),
+            can_move=not user.is_client,
+            today=timezone.localdate(),
+        )
         return context
 
 
@@ -78,15 +115,49 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
 
         subtasks = list(task.subtasks.all())
         done = sum(1 for subtask in subtasks if subtask.is_completed)
+        progress = round(100 * done / len(subtasks)) if subtasks else 0
+
+        comments = list(task.comments.select_related('author'))
+        time_logs = list(task.time_logs.select_related('user'))
+        logged = sum((log.hours for log in time_logs), Decimal('0'))
+
+        per_person = defaultdict(Decimal)
+        for log in time_logs:
+            per_person[log.user.get_full_name() or log.user.username] += log.hours
+        time_by_person = [
+            {'name': name, 'hours': hours, 'percent': round(100 * hours / logged)}
+            for name, hours in sorted(per_person.items(), key=lambda item: item[1], reverse=True)
+        ]
+
+        estimated = task.estimated_hours
+        cards = [
+            {
+                'label': 'Subtareas', 'dark': True, 'href': '#subtasks',
+                'value': progress if subtasks else '—', 'unit': '%' if subtasks else '',
+                'caption': f'{done} de {plural(len(subtasks), "subtarea")}' if subtasks else 'Sin subtareas',
+            },
+            {
+                'label': 'Horas registradas', 'value': plain(logged), 'unit': ' h', 'href': '#time',
+                'caption': f'de {plain(estimated)} h estimadas' if estimated is not None else 'Sin estimación',
+            },
+            {**self.deadline_card(task, today), 'label': 'Vencimiento', 'href': '#details'},
+            {
+                'label': 'Comentarios', 'value': len(comments), 'unit': '', 'href': '#comments',
+                'caption': 'Ver la conversación' if comments else 'Aún no hay comentarios',
+            },
+        ]
 
         context.update(
+            cards=cards,
             subtasks=subtasks,
             subtasks_done=done,
-            subtasks_progress=round(100 * done / len(subtasks)) if subtasks else 0,
-            comments=task.comments.select_related('author'),
+            subtasks_progress=progress,
+            comments=comments,
             attachments=task.attachments.select_related('uploaded_by'),
-            time_logs=task.time_logs.select_related('user'),
-            logged_hours=task.time_logs.aggregate(total=Sum('hours'))['total'] or 0,
+            time_logs=time_logs,
+            time_by_person=time_by_person,
+            logged_hours=logged,
+            statuses=Task.Status.choices,
             subtask_form=SubtaskForm(),
             comment_form=CommentForm(),
             time_form=TimeLogForm(initial={'date': today}),
@@ -95,6 +166,21 @@ class TaskDetailView(LoginRequiredMixin, DetailView):
             today=today,
         )
         return context
+
+    @staticmethod
+    def deadline_card(task, today):
+        if not task.due_date:
+            return {'value': '—', 'unit': '', 'caption': 'Sin fecha de vencimiento', 'alert': False}
+        days = (task.due_date - today).days
+        when = date_format(task.due_date, 'j M Y')
+        unit = ' día' if abs(days) == 1 else ' días'
+        if task.status == Task.Status.DONE:
+            return {'value': 'Hecha', 'unit': '', 'caption': f'Vencía el {when}', 'alert': False}
+        if days < 0:
+            return {'value': -days, 'unit': unit, 'caption': f'Venció el {when}', 'alert': True}
+        if days == 0:
+            return {'value': 'Hoy', 'unit': '', 'caption': 'Vence hoy', 'alert': False}
+        return {'value': days, 'unit': unit, 'caption': f'Vence el {when}', 'alert': False}
 
 
 class TaskActionView(LoginRequiredMixin, View):
