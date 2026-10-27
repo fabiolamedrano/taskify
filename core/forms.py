@@ -1,7 +1,7 @@
 from django import forms
 
 INPUT = (
-    'w-full rounded-lg border border-line bg-white px-3 py-2 text-sm '
+    'w-full rounded-xl border border-line bg-white px-3 py-2 text-sm '
     'focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20'
 )
 
