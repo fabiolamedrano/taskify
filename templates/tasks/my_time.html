@@ -5,48 +5,59 @@
 {% block page_title %}Registro de tiempo{% endblock %}
 
 {% block page_content %}
-<div class="space-y-6">
+<div class="space-y-5">
 
-  <!-- Navegación entre semanas -->
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-2">
-      <a href="?week={{ prev_week }}" aria-label="Semana anterior"
-         class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">←</a>
-      <p class="min-w-44 text-center text-sm font-semibold">{{ week_start|date:"j M" }} – {{ week_end|date:"j M Y" }}</p>
-      {% if next_week %}
-        <a href="?week={{ next_week }}" aria-label="Semana siguiente"
-           class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">→</a>
-      {% else %}
-        <span aria-hidden="true" class="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted">→</span>
+  <!-- Título y navegación entre semanas -->
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Registro de tiempo</h2>
+      <p class="mt-1 text-muted">Tus horas, semana a semana.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="inline-flex items-center rounded-full border border-line/70 bg-white p-1">
+        <a href="?week={{ prev_week }}" aria-label="Semana anterior"
+           class="rounded-full px-3.5 py-1.5 text-sm font-medium hover:bg-surface">←</a>
+        <p class="min-w-44 px-2 text-center text-sm font-semibold">{{ week_start|date:"j M" }} – {{ week_end|date:"j M Y" }}</p>
+        {% if next_week %}
+          <a href="?week={{ next_week }}" aria-label="Semana siguiente"
+             class="rounded-full px-3.5 py-1.5 text-sm font-medium hover:bg-surface">→</a>
+        {% else %}
+          <span aria-hidden="true" class="rounded-full px-3.5 py-1.5 text-sm text-line">→</span>
+        {% endif %}
+      </div>
+      {% if not is_current_week %}
+        <a href="{% url 'tasks:my_time' %}" class="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Esta semana</a>
       {% endif %}
     </div>
-    {% if not is_current_week %}
-      <a href="{% url 'tasks:my_time' %}" class="text-sm font-medium text-brand-700 hover:underline">Ir a esta semana</a>
-    {% endif %}
   </div>
 
   <!-- Resumen -->
-  <section aria-label="Resumen" class="flex flex-wrap gap-3">
-    {% include 'includes/_stat_tile.html' with label='Total de la semana' value=week_total|floatformat:"-2" unit='h' accent='border-l-brand-700' %}
-    {% include 'includes/_stat_tile.html' with label='Días con registro' value=days_logged unit='de 7' accent='border-l-teal-600' %}
-    {% include 'includes/_stat_tile.html' with label='Proyectos' value=projects|length accent='border-l-ink' %}
+  <section aria-label="Resumen" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+      {% include 'core/_stat_card.html' with label=card.label value=card.value unit=card.unit caption=card.caption href=card.href dark=card.dark %}
+    {% endfor %}
   </section>
 
-  <div class="grid gap-6 lg:grid-cols-3">
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
 
-    <div class="space-y-6 lg:col-span-2">
+    <div class="min-w-0 space-y-5 lg:col-span-2">
 
-      <!-- Gráfica de barras por día -->
-      <section class="rounded-xl border border-line bg-white p-5">
-        <h2 class="font-bold">Horas por día</h2>
-        <div class="mt-5 grid grid-cols-7 gap-2 sm:gap-4">
+      <!-- Gráfica por día -->
+      <section id="chart" class="scroll-mt-24 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Horas por día</h2>
+        <div class="mt-6 grid grid-cols-7 gap-2 sm:gap-4">
           {% for day in days %}
-            <div class="flex flex-col items-center gap-1">
+            <div class="flex min-w-0 flex-col items-center gap-2">
               <span class="h-4 text-xs font-semibold">{% if day.total %}{{ day.total|floatformat:"-2" }}{% endif %}</span>
-              <div class="flex h-40 w-full items-end border-b border-line">
-                <div class="w-full rounded-t-md {% if day.is_today %}bg-brand-700{% else %}bg-ink/70{% endif %}"
-                     style="height: {{ day.percent }}%"
-                     role="img" aria-label="{{ day.date|date:'l j' }}: {{ day.total|floatformat:'-2' }} horas"></div>
+              <div class="flex h-40 w-full max-w-[3.5rem] items-end">
+                {% if day.total %}
+                  <div class="w-full rounded-full {% if day.is_today %}bg-brand-700{% else %}bg-ink{% endif %}"
+                       style="height: {{ day.percent }}%" role="img"
+                       aria-label="{{ day.date|date:'l j' }}: {{ day.total|floatformat:'-2' }} horas"></div>
+                {% else %}
+                  <div class="w-full rounded-full" aria-hidden="true"
+                       style="height: 22%; background-image: repeating-linear-gradient(135deg, #D9D4D7 0 3px, transparent 3px 7px)"></div>
+                {% endif %}
               </div>
               <span class="text-xs {% if day.is_today %}font-bold{% else %}text-muted{% endif %}">{{ day.date|date:"D j" }}</span>
             </div>
@@ -55,19 +66,19 @@
       </section>
 
       <!-- Por proyecto -->
-      <section class="rounded-xl border border-line bg-white p-5">
-        <h2 class="font-bold">Por proyecto</h2>
-        <ul class="mt-4 space-y-4">
+      <section id="projects" class="scroll-mt-24 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+        <h2 class="text-lg font-bold">Por proyecto</h2>
+        <ul class="mt-4 space-y-5">
           {% for item in projects %}
             <li>
-              <div class="flex justify-between gap-3 text-sm">
-                <a href="{{ item.project.get_absolute_url }}" class="font-semibold hover:text-brand-700">{{ item.project.name }}</a>
-                <span class="text-muted">{{ item.hours|floatformat:"-2" }} h · {{ item.percent }}%</span>
+              <div class="flex items-baseline justify-between gap-3 text-sm">
+                <a href="{{ item.project.get_absolute_url }}" class="truncate font-semibold hover:text-brand-700">{{ item.project.name }}</a>
+                <span class="shrink-0 text-muted">{{ item.hours|floatformat:"-2" }} h · {{ item.percent }}%</span>
               </div>
-              <div class="mt-2 h-2 rounded-full bg-line" role="progressbar"
+              <div class="mt-2 h-2.5 rounded-full bg-line" role="progressbar"
                    aria-label="Horas en {{ item.project.name }}"
                    aria-valuenow="{{ item.percent }}" aria-valuemin="0" aria-valuemax="100">
-                <div class="h-2 rounded-full bg-brand-700" style="width: {{ item.percent }}%"></div>
+                <div class="h-2.5 rounded-full bg-brand-700" style="width: {{ item.percent }}%"></div>
               </div>
             </li>
           {% empty %}
@@ -79,9 +90,9 @@
 
     <!-- Registro rápido -->
     {% if quick_form %}
-      <aside>
-        <section class="rounded-xl border border-line bg-white p-5">
-          <h2 class="font-bold">Registrar tiempo</h2>
+      <aside class="min-w-0">
+        <section class="rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+          <h2 class="text-lg font-bold">Registrar tiempo</h2>
           {% if open_tasks_count %}
             <form method="post" action="{% url 'tasks:my_time_add' %}" class="mt-4 space-y-3">
               {% csrf_token %}
@@ -90,11 +101,11 @@
                 {{ quick_form.task }}
               </div>
               <div class="grid grid-cols-2 gap-3">
-                <div>
+                <div class="min-w-0">
                   <label for="{{ quick_form.date.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Fecha</label>
                   {{ quick_form.date }}
                 </div>
-                <div>
+                <div class="min-w-0">
                   <label for="{{ quick_form.hours.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Horas</label>
                   {{ quick_form.hours }}
                 </div>
@@ -103,7 +114,7 @@
                 <label for="{{ quick_form.description.id_for_label }}" class="mb-1 block text-xs font-medium text-muted">Descripción</label>
                 {{ quick_form.description }}
               </div>
-              <button class="w-full rounded-lg bg-brand-700 py-2 text-sm font-semibold text-white hover:bg-brand-800">+ Registrar tiempo</button>
+              <button class="w-full rounded-full bg-brand-700 py-2.5 text-sm font-semibold text-white hover:bg-brand-800">+ Registrar tiempo</button>
               <p class="text-xs text-muted">Aquí aparecen tus tareas abiertas. Para otras, regístralo desde el detalle de la tarea.</p>
             </form>
           {% else %}
@@ -115,43 +126,43 @@
   </div>
 
   <!-- Historial de la semana -->
-  <section class="rounded-xl border border-line bg-white">
-    <h2 class="border-b border-line px-5 py-4 font-bold">Registros de la semana ({{ logs|length }})</h2>
-    <div class="overflow-x-auto">
+  <section id="history" class="scroll-mt-24 rounded-3xl border border-line/70 bg-white p-5 sm:p-6">
+    <h2 class="text-lg font-bold">Registros de la semana ({{ logs|length }})</h2>
+    <div class="mt-4 overflow-x-auto">
       <table class="w-full min-w-[640px] text-left text-sm">
         <thead class="text-xs uppercase text-muted">
           <tr>
-            <th class="px-5 py-3 font-medium">Fecha</th>
-            <th class="px-5 py-3 font-medium">Tarea</th>
-            <th class="px-5 py-3 font-medium">Descripción</th>
-            <th class="px-5 py-3 text-right font-medium">Horas</th>
-            <th class="px-5 py-3"><span class="sr-only">Acciones</span></th>
+            <th class="px-3 py-3 font-medium">Fecha</th>
+            <th class="px-3 py-3 font-medium">Tarea</th>
+            <th class="px-3 py-3 font-medium">Descripción</th>
+            <th class="px-3 py-3 text-right font-medium">Horas</th>
+            <th class="px-3 py-3"><span class="sr-only">Acciones</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-line">
           {% for log in logs %}
             <tr>
-              <td class="whitespace-nowrap px-5 py-3">{{ log.date|date:"D j M" }}</td>
-              <td class="px-5 py-3">
+              <td class="whitespace-nowrap px-3 py-3">{{ log.date|date:"D j M" }}</td>
+              <td class="px-3 py-3">
                 <a href="{{ log.task.get_absolute_url }}" class="font-semibold hover:text-brand-700">{{ log.task.title }}</a>
                 <p class="text-xs text-muted">{{ log.task.project.name }}</p>
               </td>
-              <td class="px-5 py-3 text-muted">{{ log.description|default:"—" }}</td>
-              <td class="px-5 py-3 text-right font-semibold">{{ log.hours|floatformat:"-2" }} h</td>
-              <td class="px-5 py-3 text-right">
+              <td class="px-3 py-3 text-muted">{{ log.description|default:"—" }}</td>
+              <td class="px-3 py-3 text-right font-semibold">{{ log.hours|floatformat:"-2" }} h</td>
+              <td class="px-3 py-3 text-right">
                 {% if not user.is_client %}
                   <form method="post" action="{% url 'tasks:my_time_delete' log.pk %}"
                         data-confirm="Se eliminará el registro de {{ log.hours|floatformat:'-2' }} h en «{{ log.task.title }}»."
                         data-confirm-title="¿Eliminar registro de tiempo?" data-confirm-button="Eliminar" data-confirm-tone="danger">
                     {% csrf_token %}
                     <button type="submit" aria-label="Eliminar registro de {{ log.hours|floatformat:'-2' }} horas en {{ log.task.title }}"
-                            class="rounded p-1.5 text-muted hover:bg-surface hover:text-red-700">✕</button>
+                            class="rounded-full p-1.5 text-muted hover:bg-surface hover:text-red-700">✕</button>
                   </form>
                 {% endif %}
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="px-5 py-8 text-center text-muted">No hay registros en esta semana.</td></tr>
+            <tr><td colspan="5" class="px-3 py-10 text-center text-muted">No hay registros en esta semana.</td></tr>
           {% endfor %}
         </tbody>
       </table>
