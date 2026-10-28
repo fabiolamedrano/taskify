@@ -529,9 +529,10 @@ def my_time_url(day):
 
 class MyTimeView(LoginRequiredMixin, TemplateView):
     template_name = 'tasks/my_time.html'
-    MIN_BAR = 4
+    MIN_BAR = 12  # porcentaje mínimo para que un día con horas se vea como píldora
 
     def get_week_start(self, today):
+        """Lunes de la semana pedida en ?week=AAAA-MM-DD; si es inválido, la semana actual."""
         try:
             day = date.fromisoformat(self.request.GET.get('week', ''))
         except ValueError:
@@ -546,15 +547,18 @@ class MyTimeView(LoginRequiredMixin, TemplateView):
         today = timezone.localdate()
         start = self.get_week_start(today)
         end = start + timedelta(days=6)
+        visible = Task.objects.visible_to(user)
 
         logs = list(
-            TimeLog.objects.filter(
-                user=user,
-                date__range=(start, end),
-                task__in=Task.objects.visible_to(user),
-            )
+            TimeLog.objects.filter(user=user, date__range=(start, end), task__in=visible)
             .select_related('task__project')
             .order_by('-date', '-created_at')
+        )
+        previous_total = (
+            TimeLog.objects.filter(
+                user=user, task__in=visible,
+                date__range=(start - timedelta(days=7), start - timedelta(days=1)),
+            ).aggregate(total=Sum('hours'))['total'] or Decimal('0')
         )
 
         per_day = defaultdict(Decimal)
@@ -564,6 +568,8 @@ class MyTimeView(LoginRequiredMixin, TemplateView):
             per_project[log.task.project] += log.hours
 
         week_total = sum(per_day.values(), Decimal('0'))
+        days_logged = len(per_day)
+        # La escala mínima es 8 h, para que un día corto no parezca una jornada completa
         scale = max(max(per_day.values(), default=Decimal('0')), Decimal('8'))
 
         days = []
@@ -578,13 +584,32 @@ class MyTimeView(LoginRequiredMixin, TemplateView):
             for project, hours in sorted(per_project.items(), key=lambda item: item[1], reverse=True)
         ]
 
+        if not week_total and not previous_total:
+            caption = 'Sin horas registradas'
+        elif not previous_total:
+            caption = 'La semana anterior no tuvo registros'
+        else:
+            diff = week_total - previous_total
+            caption = f'{"+" if diff >= 0 else ""}{plain(diff)} h frente a la semana anterior'
+        average = (week_total / days_logged).quantize(Decimal('0.1')) if days_logged else Decimal('0')
+
         current_start = today - timedelta(days=today.weekday())
         context.update(
+            cards=[
+                {'label': 'Total de la semana', 'value': plain(week_total), 'unit': ' h',
+                 'caption': caption, 'href': '#history', 'dark': True},
+                {'label': 'Días con registro', 'value': days_logged, 'unit': ' de 7',
+                 'caption': 'Días con horas', 'href': '#chart'},
+                {'label': 'Promedio diario', 'value': plain(average), 'unit': ' h',
+                 'caption': 'En los días con registro', 'href': '#chart'},
+                {'label': 'Proyectos', 'value': len(per_project), 'unit': '',
+                 'caption': 'Con horas esta semana', 'href': '#projects'},
+            ],
             logs=logs,
             days=days,
             projects=projects,
             week_total=week_total,
-            days_logged=len(per_day),
+            days_logged=days_logged,
             week_start=start,
             week_end=end,
             prev_week=(start - timedelta(days=7)).isoformat(),

@@ -558,3 +558,35 @@ class TaskDetailRedesignTests(WorldMixin, TestCase):
         read_only = self.get(self.client_user)
         self.assertFalse(read_only.context['can_edit'])
         self.assertContains(read_only, 'Solo lectura')
+
+class MyTimeCardsTests(WorldMixin, TestCase):
+    def cards(self, **params):
+        self.client.force_login(self.member)
+        return self.client.get(reverse('tasks:my_time'), params).context['cards']
+
+    def test_week_cards_and_comparison_with_the_previous_week(self):
+        today = timezone.localdate()
+        monday = today - timedelta(days=today.weekday())
+        TimeLog.objects.create(task=self.task, user=self.member, date=monday, hours=Decimal('4'))
+        TimeLog.objects.create(task=self.task, user=self.member, date=monday - timedelta(days=3), hours=Decimal('2.5'))
+        cards = self.cards()
+        self.assertEqual((cards[0]['value'], cards[0]['caption']), ('4', '+1.5 h frente a la semana anterior'))
+        self.assertEqual((cards[1]['value'], cards[2]['value'], cards[3]['value']), (1, '4', 1))
+
+    def test_empty_week_and_a_week_after_an_empty_one(self):
+        cards = self.cards()
+        self.assertEqual((cards[0]['value'], cards[0]['caption']), ('0', 'Sin horas registradas'))
+        TimeLog.objects.create(
+            task=self.task, user=self.member, date=timezone.localdate(), hours=Decimal('1'),
+        )
+        self.assertEqual(self.cards()[0]['caption'], 'La semana anterior no tuvo registros')
+
+    def test_bars_are_visible_but_never_taller_than_the_chart(self):
+        TimeLog.objects.create(
+            task=self.task, user=self.member, date=timezone.localdate(), hours=Decimal('0.5'),
+        )
+        self.client.force_login(self.member)
+        days = self.client.get(reverse('tasks:my_time')).context['days']
+        today_bar = [day for day in days if day['is_today']][0]
+        self.assertEqual(today_bar['percent'], 12)
+        self.assertTrue(all(0 <= day['percent'] <= 100 for day in days))
