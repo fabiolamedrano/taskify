@@ -1,8 +1,13 @@
+from datetime import timedelta
+from decimal import Decimal
+
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from core.factories import WorldMixin, make_user
+from core.factories import WorldMixin, make_task, make_team, make_user
 from projects.models import Project
+from tasks.models import Task, TimeLog
 
 from .models import Team, TeamMember
 
@@ -84,3 +89,52 @@ class TeamViewTests(WorldMixin, TestCase):
         self.assertRedirects(self.client.post(url), reverse('teams:list'))
         self.assertFalse(Team.objects.filter(pk=self.team.pk).exists())
         self.assertIsNone(Project.objects.get(pk=self.project.pk).team)
+
+class TeamPagesTests(WorldMixin, TestCase):
+    def list_context(self, user, **params):
+        self.client.force_login(user)
+        return self.client.get(reverse('teams:list'), params).context
+
+    def test_list_cards_and_team_numbers(self):
+        make_task(self.project, assigned_user=self.leader, status=Task.Status.DONE)
+        context = self.list_context(self.member)
+        team = context['teams'][0]
+        self.assertEqual((team.member_count, team.project_count, team.open_tasks), (3, 1, 1))
+        self.assertEqual(len(team.preview), 3)
+        self.assertEqual([card['value'] for card in context['cards']], [1, 3, 1, 1])
+
+    def test_avatar_preview_is_limited_to_five(self):
+        make_team(leader=self.leader, members=[make_user() for _ in range(6)], name='Grande')
+        teams = {team.name: team for team in self.list_context(self.leader)['teams']}
+        self.assertEqual(len(teams['Grande'].preview), 5)
+        self.assertEqual(teams['Grande'].extra_members, 2)
+
+    def test_search_filters_by_name(self):
+        make_team(leader=self.outsider, name='Alfa Beta')
+        context = self.list_context(self.admin, q='alfa')
+        self.assertEqual([team.name for team in context['teams']], ['Alfa Beta'])
+        self.assertEqual(context['q'], 'alfa')
+        self.assertEqual(self.list_context(self.admin, q='zzz')['teams'], [])
+
+    def test_detail_cards_members_and_projects(self):
+        today = timezone.localdate()
+        make_task(self.project, assigned_user=self.member, status=Task.Status.DONE)
+        make_task(self.project, assigned_user=self.member, due_date=today - timedelta(days=1))
+        TimeLog.objects.create(task=self.task, user=self.member, date=today, hours=Decimal('3'))
+        self.client.force_login(self.member)
+        context = self.client.get(reverse('teams:detail', args=[self.team.pk])).context
+
+        cards = context['cards']
+        self.assertEqual([card['value'] for card in cards], [3, 1, 2, '3'])
+        self.assertEqual(cards[2]['caption'], '1 vencida')
+        rows = {row.user.username: row for row in context['memberships']}
+        self.assertEqual((rows['member'].total, rows['member'].done, rows['member'].percent), (3, 1, 33))
+        self.assertEqual(rows['leader'].total, 0)
+        self.assertEqual([project.pk for project in context['projects']], [self.project.pk])
+
+    def test_member_form_is_only_for_those_who_manage_the_team(self):
+        url = reverse('teams:detail', args=[self.team.pk])
+        self.client.force_login(self.member)
+        self.assertIsNone(self.client.get(url).context['member_form'])
+        self.client.force_login(self.leader)
+        self.assertIsNotNone(self.client.get(url).context['member_form'])
