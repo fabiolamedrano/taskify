@@ -7,7 +7,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
-from core.factories import PASSWORD, TempMediaMixin, WorldMixin
+from core.factories import PASSWORD, TempMediaMixin, WorldMixin, make_user
 
 User = get_user_model()
 STRONG_PASSWORD = 'Clave-segura-2026'
@@ -206,3 +206,43 @@ class PasswordChangeTests(WorldMixin, TestCase):
         self.change(new_password1='12345678', new_password2='12345678')
         self.member.refresh_from_db()
         self.assertTrue(self.member.check_password(PASSWORD))
+
+class UserListRedesignTests(WorldMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        make_user(is_active=False)
+
+    def context(self, **params):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('users:list'), params)
+        
+        self.assertEqual(
+            response.status_code, 200, 
+            f"La vista falló con código {response.status_code} en vez de 200."
+        )
+        
+        return response.context_data
+
+    def test_cards_count_everyone_by_role(self):
+        cards = self.context()['cards']
+        self.assertEqual([card['value'] for card in cards], [6, 1, 4, 1])
+        self.assertEqual(cards[0]['caption'], '1 inactivo')
+
+    def test_chip_counts_respect_the_other_filter(self):
+        context = self.context(role='member')
+        roles = {option['label']: option for option in context['role_options']}
+        self.assertEqual((roles['Todos']['count'], roles['Miembro']['count']), (6, 4))
+        active = {option['label']: option for option in context['active_options']}
+        self.assertEqual((active['Activos']['count'], active['Inactivos']['count']), (3, 1))
+        self.assertEqual(len(context['users']), 4)
+
+    def test_search_filters_and_hidden_params_keep_the_filters(self):
+        context = self.context(q='leader', role='member')
+        self.assertEqual([user.username for user in context['users']], ['leader'])
+        self.assertEqual(context['hidden_params'], [('role', 'member')])
+        self.assertTrue(context['has_filters'])
+
+    def test_invalid_filters_are_ignored(self):
+        context = self.context(role='inventado', active='quizá')
+        self.assertEqual(len(context['users']), 6)
+        self.assertFalse(context['has_filters'])

@@ -12,7 +12,7 @@ from django.utils import timezone
 from core.factories import WorldMixin, make_task, make_user
 from projects.models import Project
 from notifications.models import Notification
-from tasks.models import Task, TimeLog
+from tasks.models import Tag, Task, TimeLog
 
 User = get_user_model()
 
@@ -121,3 +121,32 @@ class SeedBulkCommandTests(TestCase):
         self.run_command('--reset')
         self.assertEqual(Project.objects.count(), 3)
         self.assertEqual(User.objects.filter(username__startswith='demo_').count(), 8)
+
+class FormPagesRenderTests(WorldMixin, TestCase):
+    def test_every_form_and_confirmation_page_renders_for_an_admin(self):
+        tag = Tag.objects.create(name='Etiqueta', color='#112233')
+        self.client.force_login(self.admin)
+        pages = [
+            reverse('projects:create'), reverse('projects:update', args=[self.project.pk]),
+            reverse('projects:delete', args=[self.project.pk]),
+            reverse('tasks:create', args=[self.project.pk]), reverse('tasks:update', args=[self.task.pk]),
+            reverse('tasks:delete', args=[self.task.pk]),
+            reverse('teams:create'), reverse('teams:update', args=[self.team.pk]),
+            reverse('teams:delete', args=[self.team.pk]),
+            reverse('tags:list'), reverse('tags:create'), reverse('tags:update', args=[tag.pk]),
+            reverse('users:list'), reverse('users:create'), reverse('users:update', args=[self.member.pk]),
+        ]
+        for url in pages:
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_headings_and_buttons_come_from_each_page(self):
+        self.client.force_login(self.admin)
+        self.assertContains(self.client.get(reverse('projects:create')), 'Crear proyecto')
+        self.assertContains(
+            self.client.get(reverse('projects:update', args=[self.project.pk])), 'Guardar cambios',
+        )
+        self.assertContains(self.client.get(reverse('tags:create')), 'Crear etiqueta')
+        self.assertContains(
+            self.client.get(reverse('users:update', args=[self.member.pk])), 'multipart/form-data',
+        )
