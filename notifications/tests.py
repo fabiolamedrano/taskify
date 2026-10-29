@@ -82,3 +82,69 @@ class DueNotificationCommandTests(WorldMixin, TestCase):
 
         self.run_command()
         self.assertEqual(notifications.count(), 2)
+
+class NotificationPageTests(WorldMixin, TestCase):
+    def make(self, kind=Notification.Type.COMMENT, read=False, message='Aviso'):
+        return Notification.objects.create(
+            user=self.member, task=self.task, type=kind, message=message, is_read=read,
+        )
+
+    def get(self, **params):
+        self.client.force_login(self.member)
+        return self.client.get(reverse('notifications:list'), params)
+
+    def test_cards_count_unread_by_type(self):
+        self.make(Notification.Type.ASSIGNMENT)
+        self.make(Notification.Type.ASSIGNMENT)
+        self.make(Notification.Type.DUE_DATE)
+        self.make(Notification.Type.COMMENT, read=True)
+        cards = self.get().context['cards']
+        self.assertEqual([card['value'] for card in cards], [3, 2, 1, 0])
+
+    def test_type_and_unread_filters_combine(self):
+        self.make(Notification.Type.ASSIGNMENT, message='A')
+        self.make(Notification.Type.COMMENT, message='B')
+        self.make(Notification.Type.COMMENT, read=True, message='C')
+
+        def shown(response):
+            return sorted(item.message for item in response.context['notifications'])
+
+        self.assertEqual(shown(self.get(type='comment')), ['B', 'C'])
+        self.assertEqual(shown(self.get(type='comment', filter='unread')), ['B'])
+        self.assertEqual(len(self.get(type='inventado').context['notifications']), 3)
+
+    def test_notifications_are_labelled_by_day(self):
+        self.make(message='Reciente')
+        old = self.make(message='Antigua')
+        Notification.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=1))
+        labels = {item.message: item.day_label for item in self.get().context['notifications']}
+        self.assertEqual((labels['Reciente'], labels['Antigua']), ('Hoy', 'Ayer'))
+
+    def test_mark_one_as_read_without_opening_it(self):
+        note = self.make()
+        self.client.force_login(self.member)
+        url = reverse('notifications:mark_read', args=[note.pk])
+        response = self.client.post(url, {'next': 'https://evil.example/'})
+        self.assertRedirects(response, reverse('notifications:list'))
+        note.refresh_from_db()
+        self.assertTrue(note.is_read)
+
+        other = self.make()
+        safe = f"{reverse('notifications:list')}?filter=unread"
+        response = self.client.post(reverse('notifications:mark_read', args=[other.pk]), {'next': safe})
+        self.assertRedirects(response, safe, fetch_redirect_response=False)
+
+    def test_cannot_mark_someone_elses_notification(self):
+        note = self.make()
+        self.client.force_login(self.leader)
+        response = self.client.post(reverse('notifications:mark_read', args=[note.pk]))
+        self.assertEqual(response.status_code, 404)
+        note.refresh_from_db()
+        self.assertFalse(note.is_read)
+
+    def test_a_page_past_the_end_shows_the_last_page(self):
+        for _ in range(16):
+            self.make()
+        response = self.get(page=9)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['page_obj'].number, 2)
