@@ -5,9 +5,10 @@ from io import StringIO
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.test import TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.views.defaults import server_error
 
 from core.factories import WorldMixin, make_task, make_user
 from projects.models import Project
@@ -150,3 +151,31 @@ class FormPagesRenderTests(WorldMixin, TestCase):
         self.assertContains(
             self.client.get(reverse('users:update', args=[self.member.pk])), 'multipart/form-data',
         )
+
+class ErrorPagesTests(WorldMixin, TestCase):
+    def test_404_page_for_a_missing_url(self):
+        response = self.client.get('/esta/pagina/no/existe/')
+        self.assertContains(response, 'Página no encontrada', status_code=404)
+        self.assertTemplateUsed(response, '404.html')
+
+    def test_a_hidden_project_shows_the_404_page(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('projects:detail', args=[self.hidden_project.pk]))
+        self.assertContains(response, 'o no tienes acceso a ella', status_code=404)
+
+    def test_403_page_when_permission_is_missing(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('users:list'))
+        self.assertContains(response, 'No tienes permiso', status_code=403)
+        self.assertTemplateUsed(response, '403.html')
+
+    def test_expired_form_shows_its_own_403_page(self):
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(reverse('login'), {'username': 'x', 'password': 'y'})
+        self.assertContains(response, 'La página caducó', status_code=403)
+        self.assertTemplateUsed(response, '403_csrf.html')
+
+    def test_500_page_renders_without_a_session(self):
+        response = server_error(RequestFactory().get('/'))
+        self.assertEqual(response.status_code, 500)
+        self.assertIn('Algo salió mal'.encode(), response.content)

@@ -31,7 +31,6 @@
     --container-lg: 32rem;
     --container-xl: 36rem;
     --container-2xl: 42rem;
-    --container-3xl: 48rem;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
     --text-sm: 0.875rem;
@@ -446,6 +445,9 @@
   .h-12 {
     height: calc(var(--spacing) * 12);
   }
+  .h-16 {
+    height: calc(var(--spacing) * 16);
+  }
   .h-24 {
     height: calc(var(--spacing) * 24);
   }
@@ -512,6 +514,9 @@
   .w-12 {
     width: calc(var(--spacing) * 12);
   }
+  .w-16 {
+    width: calc(var(--spacing) * 16);
+  }
   .w-24 {
     width: calc(var(--spacing) * 24);
   }
@@ -574,9 +579,6 @@
   }
   .min-w-\[640px\] {
     min-width: 640px;
-  }
-  .min-w-\[720px\] {
-    min-width: 720px;
   }
   .min-w-\[760px\] {
     min-width: 760px;
@@ -1441,9 +1443,6 @@
     .sm\:w-52 {
       width: calc(var(--spacing) * 52);
     }
-    .sm\:w-60 {
-      width: calc(var(--spacing) * 60);
-    }
     .sm\:w-96 {
       width: calc(var(--spacing) * 96);
     }
@@ -1464,6 +1463,9 @@
     }
     .sm\:flex-row {
       flex-direction: row;
+    }
+    .sm\:justify-center {
+      justify-content: center;
     }
     .sm\:justify-end {
       justify-content: flex-end;

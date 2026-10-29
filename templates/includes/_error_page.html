@@ -1,13 +1,21 @@
-<main class="flex min-h-screen items-center justify-center px-4">
-  <div class="w-full max-w-md text-center">
-    <p class="text-6xl font-bold text-brand-700">{{ code }}</p>
-    <h1 class="mt-4 text-2xl font-bold">{{ title }}</h1>
-    <p class="mt-2 text-muted">{{ message }}</p>
-    <div class="mt-6 flex justify-center gap-3">
-      <a href="{% url 'dashboard' %}"
-         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Ir al inicio</a>
-      <button type="button" onclick="history.back()"
-              class="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Volver</button>
-    </div>
+<div class="text-center">
+  <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-100 text-brand-800" aria-hidden="true">
+    <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      {% if icon == 'lock' %}
+        <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      {% elif icon == 'search' %}
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      {% else %}
+        <path d="M12 3 2 21h20L12 3Z"/><path d="M12 10v5M12 18h.01"/>
+      {% endif %}
+    </svg>
+  </span>
+  <p class="mt-5 text-6xl font-bold tracking-tight text-brand-700">{{ code }}</p>
+  <h1 class="mt-2 text-xl font-bold">{{ title }}</h1>
+  <p class="mt-2 text-sm text-muted">{{ message }}</p>
+  <div class="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+    <button type="button" onclick="history.back()"
+            class="rounded-full border border-line px-6 py-2.5 text-sm font-medium hover:bg-surface">Volver</button>
+    <a href="/" class="rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-800">Ir al inicio</a>
   </div>
-</main>
+</div>

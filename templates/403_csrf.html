@@ -1,0 +1,7 @@
+{% extends 'layouts/auth.html' %}
+
+{% block title %}La página caducó · Taskify{% endblock %}
+
+{% block auth_content %}
+  {% include 'includes/_error_page.html' with code='403' icon='lock' title='La página caducó' message='El formulario estuvo abierto demasiado tiempo, o tu navegador bloquea las cookies. Recarga la página e inténtalo de nuevo.' %}
+{% endblock %}

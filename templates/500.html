@@ -1,13 +1,7 @@
-{% extends 'base.html' %}
+{% extends 'layouts/auth.html' %}
 
 {% block title %}Error · Taskify{% endblock %}
 
-{% block content %}
-<main class="flex min-h-screen items-center justify-center px-4">
-  <div class="w-full max-w-md text-center">
-    <p class="text-6xl font-bold text-brand-700">500</p>
-    <h1 class="mt-4 text-2xl font-bold">Algo salió mal</h1>
-    <p class="mt-2 text-muted">Tuvimos un problema en el servidor. Inténtalo de nuevo en unos minutos.</p>
-  </div>
-</main>
+{% block auth_content %}
+  {% include 'includes/_error_page.html' with code='500' icon='warning' title='Algo salió mal' message='Tuvimos un problema en el servidor. Inténtalo de nuevo en unos minutos.' %}
 {% endblock %}
