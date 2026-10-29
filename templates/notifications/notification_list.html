@@ -5,54 +5,95 @@
 {% block page_title %}Notificaciones{% endblock %}
 
 {% block page_content %}
-<div class="mx-auto max-w-3xl space-y-4">
+<div class="space-y-5">
 
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <div class="flex gap-2 text-sm font-medium">
-      <a href="{% url 'notifications:list' %}"
-         class="rounded-lg px-3 py-2 {% if not only_unread %}bg-ink text-white{% else %}border border-line bg-white hover:bg-surface{% endif %}">Todas</a>
-      <a href="{% url 'notifications:list' %}?filter=unread"
-         class="rounded-lg px-3 py-2 {% if only_unread %}bg-ink text-white{% else %}border border-line bg-white hover:bg-surface{% endif %}">
-        Sin leer{% if unread_notifications_count %} ({{ unread_notifications_count }}){% endif %}
-      </a>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Notificaciones</h2>
+      <p class="mt-1 text-muted">Lo que pasa en tus tareas y proyectos.</p>
     </div>
     {% if unread_notifications_count %}
       <form method="post" action="{% url 'notifications:read_all' %}">
         {% csrf_token %}
-        <button class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-surface">Marcar todas como leídas</button>
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium hover:bg-surface">Marcar todas como leídas</button>
       </form>
     {% endif %}
   </div>
 
-  <ul class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
-    {% for notification in notifications %}
-      <li class="flex items-start gap-3 border-l-4 px-5 py-4 {% if notification.is_read %}border-l-transparent{% else %}border-l-brand-700{% endif %}">
-        <div class="min-w-0 flex-1">
-          {% if notification.task_id %}
-            <form method="post" action="{% url 'notifications:open' notification.pk %}">
-              {% csrf_token %}
-              <button class="text-left text-sm hover:text-brand-700 {% if not notification.is_read %}font-semibold{% endif %}">
-                {{ notification.message }}
-              </button>
-            </form>
-          {% else %}
-            <p class="text-sm {% if not notification.is_read %}font-semibold{% endif %}">{{ notification.message }}</p>
-          {% endif %}
-          <p class="mt-1 text-xs text-muted">
-            <span class="rounded-full bg-surface px-2 py-0.5 font-medium">{{ notification.get_type_display }}</span>
-            · Hace {{ notification.created_at|timesince }}
-          </p>
-        </div>
-        {% if not notification.is_read %}
-          <span class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-700" role="img" aria-label="Sin leer"></span>
-        {% endif %}
-      </li>
-    {% empty %}
-      <li class="px-5 py-10 text-center text-sm text-muted">
-        {% if only_unread %}No tienes notificaciones sin leer.{% else %}Todavía no tienes notificaciones.{% endif %}
-      </li>
+  <!-- Resumen -->
+  <section aria-label="Resumen" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+      {% include 'core/_stat_card.html' with label=card.label value=card.value unit=card.unit caption=card.caption href=card.href dark=card.dark %}
     {% endfor %}
-  </ul>
+  </section>
+
+  <!-- Filtros -->
+  <div class="flex flex-wrap items-end gap-x-8 gap-y-4">
+    {% include 'includes/_filter_chips.html' with options=state_options label='Estado' %}
+    {% include 'includes/_filter_chips.html' with options=type_options label='Tipo' %}
+    {% if has_filters %}
+      <a href="{% url 'notifications:list' %}"
+         class="rounded-full border border-line bg-white px-4 py-2 text-sm font-medium hover:bg-surface">Quitar filtros</a>
+    {% endif %}
+  </div>
+
+  <!-- Lista agrupada por día -->
+  <section class="overflow-hidden rounded-3xl border border-line/70 bg-white">
+    <ul class="divide-y divide-line">
+      {% for n in notifications %}
+        {% ifchanged n.day_label %}
+          <li class="bg-surface px-5 py-2 sm:px-6">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-muted">{{ n.day_label }}</h3>
+          </li>
+        {% endifchanged %}
+        <li class="flex items-start gap-4 px-5 py-4 sm:px-6">
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full {% if n.type == 'assignment' %}bg-brand-100 text-brand-800{% elif n.type == 'due_date' %}bg-red-100 text-red-800{% else %}bg-teal-100 text-teal-800{% endif %}" aria-hidden="true">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              {% if n.type == 'assignment' %}
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>
+              {% elif n.type == 'due_date' %}
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+              {% else %}
+                <path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12Z"/>
+              {% endif %}
+            </svg>
+          </span>
+
+          <div class="min-w-0 flex-1">
+            {% if n.task_id %}
+              <form method="post" action="{% url 'notifications:open' n.pk %}">
+                {% csrf_token %}
+                <button class="break-words text-left text-sm hover:text-brand-700 {% if not n.is_read %}font-semibold{% endif %}">{{ n.message }}</button>
+              </form>
+            {% else %}
+              <p class="break-words text-sm {% if not n.is_read %}font-semibold{% endif %}">{{ n.message }}</p>
+            {% endif %}
+            <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+              <span class="rounded-full bg-surface px-2.5 py-0.5 font-medium">{{ n.get_type_display }}</span>
+              <span>Hace {{ n.created_at|timesince }}</span>
+              {% if not n.is_read %}
+                <form method="post" action="{% url 'notifications:mark_read' n.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button class="font-medium text-brand-700 hover:underline">Marcar leída</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if not n.is_read %}
+            <span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-700" role="img" aria-label="Sin leer"></span>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li class="px-5 py-14 text-center sm:px-6">
+          <p class="font-semibold">{% if has_filters %}No hay avisos con estos filtros{% else %}Todavía no tienes notificaciones{% endif %}</p>
+          <p class="mt-1 text-sm text-muted">{% if has_filters %}Prueba con otros filtros o quítalos.{% else %}Cuando te asignen una tarea o te comenten, aparecerá aquí.{% endif %}</p>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
 
   {% include 'includes/_pagination.html' %}
 </div>
