@@ -5,36 +5,49 @@
 {% block page_title %}Etiquetas{% endblock %}
 
 {% block page_content %}
-<div class="space-y-4">
+<div class="space-y-5">
 
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="text-sm text-muted">Las etiquetas son globales: se pueden usar en las tareas de cualquier proyecto.</p>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Etiquetas</h2>
+      <p class="mt-1 text-muted">Son globales: se pueden usar en las tareas de cualquier proyecto.</p>
+    </div>
     <a href="{% url 'tags:create' %}"
-       class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">+ Nueva etiqueta</a>
+       class="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-900">+ Nueva etiqueta</a>
   </div>
 
-  <ul class="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
     {% for tag in tags %}
-      <li class="flex items-center justify-between gap-3 px-5 py-3">
-        <div class="flex min-w-0 items-center gap-3">
-          <span class="h-3 w-3 shrink-0 rounded-full" style="background-color: {{ tag.color }}" aria-hidden="true"></span>
-          <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
-          <span class="truncate text-xs text-muted">{{ tag.color }} · {{ tag.task_count }} tarea{{ tag.task_count|pluralize }}</span>
+      <article class="flex min-w-0 flex-col rounded-3xl border border-line/70 bg-white p-5">
+        <div class="flex items-center gap-3">
+          <span class="h-10 w-10 shrink-0 rounded-full" style="background-color: {{ tag.color }}" aria-hidden="true"></span>
+          <div class="min-w-0">
+            <h2 class="truncate font-bold">{{ tag.name }}</h2>
+            <p class="text-xs text-muted">{{ tag.color }} · {{ tag.task_count }} tarea{{ tag.task_count|pluralize }}</p>
+          </div>
         </div>
-        <div class="flex shrink-0 items-center gap-3 text-sm">
-          <a href="{% url 'tags:update' tag.pk %}" class="font-medium text-brand-700 hover:underline">Editar</a>
+
+        <p class="mt-4">
+          <span class="rounded-full px-3 py-1 text-xs font-medium" style="background-color: {{ tag.color }}26">{{ tag.name }}</span>
+        </p>
+
+        <div class="mt-5 flex items-center gap-2 border-t border-line pt-4 text-sm">
+          <a href="{% url 'tags:update' tag.pk %}" class="rounded-full border border-line px-4 py-1.5 font-medium hover:bg-surface">Editar</a>
           <form method="post" action="{% url 'tags:delete' tag.pk %}"
                 data-confirm="Se quitará de {{ tag.task_count }} tarea{{ tag.task_count|pluralize }}. Las tareas no se borran."
                 data-confirm-title="¿Eliminar la etiqueta «{{ tag.name }}»?"
                 data-confirm-button="Eliminar" data-confirm-tone="danger">
             {% csrf_token %}
-            <button class="font-medium text-red-700 hover:underline">Eliminar</button>
+            <button class="rounded-full border border-red-200 px-4 py-1.5 font-medium text-red-700 hover:bg-red-50">Eliminar</button>
           </form>
         </div>
-      </li>
+      </article>
     {% empty %}
-      <li class="px-5 py-10 text-center text-sm text-muted">Todavía no hay etiquetas.</li>
+      <div class="col-span-full rounded-3xl border border-dashed border-line bg-white px-5 py-14 text-center">
+        <p class="font-semibold">Todavía no hay etiquetas</p>
+        <p class="mt-1 text-sm text-muted"><a href="{% url 'tags:create' %}" class="font-medium text-brand-700 hover:underline">Crea la primera</a>.</p>
+      </div>
     {% endfor %}
-  </ul>
+  </div>
 </div>
 {% endblock %}

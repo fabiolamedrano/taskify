@@ -1,0 +1,21 @@
+<div>
+  {% if field.widget_type == 'checkboxselectmultiple' %}
+    <fieldset>
+      <legend class="mb-1.5 text-sm font-medium">{{ field.label }}</legend>
+      <div class="[&>div]:flex [&>div]:flex-wrap [&>div]:gap-x-4 [&>div]:gap-y-2 [&_label]:flex [&_label]:items-center [&_label]:gap-2 [&_label]:text-sm">
+        {{ field }}
+      </div>
+    </fieldset>
+  {% elif field.widget_type == 'checkbox' %}
+    <label for="{{ field.id_for_label }}" class="flex items-center gap-2 text-sm font-medium">
+      {{ field }} {{ field.label }}
+    </label>
+  {% else %}
+    <label for="{{ field.id_for_label }}" class="mb-1.5 block text-sm font-medium">
+      {{ field.label }}{% if field.field.required %} <span class="text-red-700" aria-hidden="true">*</span>{% endif %}
+    </label>
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<div class="mt-1 text-xs text-muted [&_ul]:mt-1 [&_ul]:list-disc [&_ul]:space-y-0.5 [&_ul]:pl-4">{{ field.help_text }}</div>{% endif %}
+  {% for error in field.errors %}<p class="mt-1 text-xs text-red-700">{{ error }}</p>{% endfor %}
+</div>

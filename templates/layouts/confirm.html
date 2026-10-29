@@ -1,0 +1,16 @@
+{% extends 'layouts/app.html' %}
+
+{% block page_content %}
+<div class="mx-auto max-w-lg rounded-3xl border border-line/70 bg-white p-6 sm:p-8">
+  <span class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-700" aria-hidden="true">
+    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M6 6l1 14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-14"/></svg>
+  </span>
+  <h2 class="mt-4 text-xl font-bold">{% block confirm_title %}{% endblock %}</h2>
+  <p class="mt-2 text-sm text-muted">{% block confirm_message %}{% endblock %}</p>
+  <form method="post" class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    {% csrf_token %}
+    <a href="{% block cancel_url %}{% endblock %}" class="rounded-full border border-line px-6 py-2.5 text-center text-sm font-medium hover:bg-surface">Cancelar</a>
+    <button class="rounded-full bg-red-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-red-800">{% block confirm_button %}Sí, eliminar{% endblock %}</button>
+  </form>
+</div>
+{% endblock %}

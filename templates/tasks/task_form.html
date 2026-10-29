@@ -1,31 +1,29 @@
-{% extends 'layouts/app.html' %}
+{% extends 'layouts/form.html' %}
 
 {% block title %}{% if object %}Editar tarea{% else %}Nueva tarea{% endif %} · Taskify{% endblock %}
-
 {% block page_title %}{% if object %}Editar tarea{% else %}Nueva tarea{% endif %}{% endblock %}
+{% block back_url %}{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'tasks:board' project.pk %}{% endif %}{% endblock %}
+{% block back_label %}{% if object %}Volver a la tarea{% else %}Tablero de {{ project.name }}{% endif %}{% endblock %}
+{% block cancel_url %}{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'tasks:board' project.pk %}{% endif %}{% endblock %}
+{% block form_heading %}{% if object %}Editar tarea{% else %}Nueva tarea{% endif %}{% endblock %}
+{% block form_intro %}Proyecto: <span class="font-semibold text-ink">{{ project.name }}</span>{% endblock %}
+{% block submit_label %}{% if object %}Guardar cambios{% else %}Crear tarea{% endif %}{% endblock %}
 
-{% block page_content %}
-<div class="mx-auto max-w-2xl space-y-4">
-  <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'tasks:board' project.pk %}{% endif %}"
-     class="text-sm font-medium text-brand-700 hover:underline">← Volver</a>
-
-  <p class="text-sm text-muted">Proyecto: <span class="font-semibold text-ink">{{ project.name }}</span></p>
-
-  <form method="post" class="space-y-5 rounded-xl border border-line bg-white p-6">
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-      <div role="alert" class="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{{ form.non_field_errors }}</div>
-    {% endif %}
-
-    {% include 'includes/_form_fields.html' %}
-
-    <div class="flex justify-end gap-3 border-t border-line pt-5">
-      <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'tasks:board' project.pk %}{% endif %}"
-         class="rounded-lg border border-line px-4 py-2 text-sm font-medium hover:bg-surface">Cancelar</a>
-      <button class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">
-        {% if object %}Guardar cambios{% else %}Crear tarea{% endif %}
-      </button>
-    </div>
-  </form>
-</div>
+{% block form_fields %}
+  {% include 'includes/_field.html' with field=form.title %}
+  {% include 'includes/_field.html' with field=form.description %}
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.priority %}</div>
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.status %}</div>
+  </div>
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.start_date %}</div>
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.due_date %}</div>
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.estimated_hours %}</div>
+  </div>
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.assigned_user %}</div>
+    <div class="min-w-0">{% include 'includes/_field.html' with field=form.assigned_team %}</div>
+  </div>
+  {% include 'includes/_field.html' with field=form.tags %}
 {% endblock %}
