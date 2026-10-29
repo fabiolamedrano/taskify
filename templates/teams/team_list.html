@@ -5,34 +5,94 @@
 {% block page_title %}Equipos{% endblock %}
 
 {% block page_content %}
-<div class="space-y-6">
+<div class="space-y-5">
 
-  {% if not user.is_client %}
-    <div class="flex justify-end">
-      <a href="{% url 'teams:create' %}"
-         class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">+ Nuevo equipo</a>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">Equipos</h2>
+      <p class="mt-1 text-muted">Las personas con las que trabajas y sus proyectos.</p>
     </div>
-  {% endif %}
+    {% if not user.is_client %}
+      <a href="{% url 'teams:create' %}"
+         class="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-900">+ Nuevo equipo</a>
+    {% endif %}
+  </div>
 
-  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-    {% for team in teams %}
-      <a href="{{ team.get_absolute_url }}"
-         class="block rounded-xl border border-line bg-white p-5 transition hover:border-brand-700 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700">
-        <h2 class="font-bold">{{ team.name }}</h2>
-        <p class="mt-1 text-sm text-muted">
-          Líder: {{ team.leader.get_full_name|default:team.leader.username|default:"Sin líder" }}
-        </p>
-        <p class="mt-3 text-sm">{{ team.description|truncatewords:18|default:"Sin descripción." }}</p>
-        <p class="mt-4 text-xs text-muted">
-          {{ team.member_count }} miembro{{ team.member_count|pluralize }}
-          · {{ team.project_count }} proyecto{{ team.project_count|pluralize }}
-        </p>
-      </a>
-    {% empty %}
-      <p class="col-span-full rounded-xl border border-line bg-white px-5 py-10 text-center text-sm text-muted">
-        Todavía no perteneces a ningún equipo.
-      </p>
+  <!-- Resumen -->
+  <section aria-label="Resumen" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {% for card in cards %}
+      {% include 'core/_stat_card.html' with label=card.label value=card.value unit=card.unit caption=card.caption href=card.href dark=card.dark %}
     {% endfor %}
+  </section>
+
+  <div id="teams" class="scroll-mt-24 space-y-4">
+
+    <form method="get" role="search" class="relative max-w-md">
+      <label for="team-search" class="sr-only">Buscar equipo</label>
+      <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="team-search" type="search" name="q" value="{{ q }}" placeholder="Buscar equipo..."
+             class="w-full rounded-full border border-line/70 bg-white py-2.5 pl-10 pr-4 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20">
+    </form>
+
+    {% if q %}
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full bg-brand-100 px-4 py-1.5 text-sm font-medium text-brand-900">
+          Búsqueda: «{{ q }}»
+          <a href="{{ clear_search_url }}" aria-label="Quitar la búsqueda" class="rounded-full px-1.5 hover:bg-brand-200">✕</a>
+        </span>
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {% for team in teams %}
+        <a href="{{ team.get_absolute_url }}"
+           class="group flex min-w-0 flex-col rounded-3xl border border-line/70 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 sm:p-6">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h3 class="truncate text-lg font-bold">{{ team.name }}</h3>
+              <p class="mt-0.5 truncate text-sm text-muted">
+                {% if team.leader %}Líder: {{ team.leader.get_full_name|default:team.leader.username }}{% else %}Sin líder{% endif %}
+              </p>
+            </div>
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line transition group-hover:border-brand-700 group-hover:text-brand-700" aria-hidden="true">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </span>
+          </div>
+
+          <p class="mt-3 line-clamp-2 min-h-10 text-sm text-muted">{{ team.description|default:"Sin descripción." }}</p>
+
+          <div class="mt-4 flex -space-x-2">
+            {% for person in team.preview %}
+              <span class="rounded-full ring-2 ring-white">{% include 'includes/_avatar.html' with person=person size='h-9 w-9' text='text-xs' %}</span>
+            {% endfor %}
+            {% if team.extra_members %}
+              <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface text-xs font-semibold text-muted ring-2 ring-white">+{{ team.extra_members }}</span>
+            {% endif %}
+          </div>
+
+          <dl class="mt-5 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-2xl bg-surface px-2 py-2.5"><dt class="text-xs text-muted">Miembros</dt><dd class="text-lg font-bold">{{ team.member_count }}</dd></div>
+            <div class="rounded-2xl bg-surface px-2 py-2.5"><dt class="text-xs text-muted">Proyectos</dt><dd class="text-lg font-bold">{{ team.project_count }}</dd></div>
+            <div class="rounded-2xl bg-surface px-2 py-2.5"><dt class="text-xs text-muted">Abiertas</dt><dd class="text-lg font-bold">{{ team.open_tasks }}</dd></div>
+          </dl>
+        </a>
+      {% empty %}
+        <div class="col-span-full rounded-3xl border border-dashed border-line bg-white px-5 py-14 text-center">
+          <p class="font-semibold">{% if q %}No hay equipos que coincidan{% else %}Todavía no perteneces a ningún equipo{% endif %}</p>
+          <p class="mt-1 text-sm text-muted">
+            {% if q %}
+              Prueba con otro nombre o <a href="{{ clear_search_url }}" class="font-medium text-brand-700 hover:underline">quita la búsqueda</a>.
+            {% elif user.is_client %}
+              Cuando te agreguen a un equipo, aparecerá aquí.
+            {% else %}
+              <a href="{% url 'teams:create' %}" class="font-medium text-brand-700 hover:underline">Crea el primero</a> o pide a un líder que te agregue.
+            {% endif %}
+          </p>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% include 'includes/_pagination.html' %}
   </div>
 </div>
 {% endblock %}
