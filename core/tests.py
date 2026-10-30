@@ -13,6 +13,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.defaults import server_error
 from django.conf import settings
+from django.template import Context, Template
+from django.template.loader import render_to_string
 
 from core.factories import WorldMixin, make_task, make_user
 from projects.models import Project
@@ -215,3 +217,43 @@ class ScrollContainerTests(TestCase):
                 checked += 1
                 self.assertIn('relative', classes.split(), f'{path.name}: falta "relative" en {classes!r}')
         self.assertGreaterEqual(checked, 3)
+
+class StatCardTests(TestCase):
+    def render(self, **extra):
+        context = {'label': 'X', 'value': 1, 'caption': 'c', 'href': '/'}
+        context.update(extra)
+        return render_to_string('core/_stat_card.html', context)
+
+    def test_dark_tone_and_alert_tint(self):
+        self.assertIn('linear-gradient', self.render(dark=True))
+        self.assertIn('bg-amber-50', self.render(tone='warm'))
+        self.assertIn('bg-teal-50', self.render(tone='cool'))
+        self.assertIn('bg-violet-50', self.render(tone='violet'))
+        self.assertIn('bg-red-50', self.render(alert=True, value=2, tone='violet'))
+        self.assertNotIn('bg-red-50', self.render(alert=True, value=0, tone='violet'))
+
+    def test_tints_only_apply_on_mobile(self):
+        self.assertIn('sm:bg-white', self.render(tone='warm'))
+
+    def test_cards_in_a_loop_get_a_tone_by_position(self):
+        template = Template(
+            "{% for card in cards %}"
+            "{% include 'core/_stat_card.html' with label=card href='/' value=1 caption='' %}"
+            "{% endfor %}"
+        )
+        html = template.render(Context({'cards': ['a', 'b', 'c', 'd']}))
+        self.assertEqual(
+            (html.count('bg-amber-50'), html.count('bg-teal-50'), html.count('bg-violet-50')),
+            (1, 1, 1),
+        )
+
+
+class SummaryGridTests(TestCase):
+    def test_every_summary_grid_is_two_columns_on_mobile(self):
+        found = 0
+        for path in Path(settings.BASE_DIR, 'templates').rglob('*.html'):
+            for classes in re.findall(r'aria-label="Resumen" class="([^"]*)"', path.read_text(encoding='utf-8')):
+                found += 1
+                self.assertIn('grid-cols-2', classes.split(), path.name)
+                self.assertNotIn('grid-cols-1', classes.split(), path.name)
+        self.assertEqual(found, 9)
