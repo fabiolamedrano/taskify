@@ -1,12 +1,12 @@
 <a href="{{ href }}"
-   class="group flex min-w-0 flex-col justify-between rounded-3xl p-5 transition hover:-translate-y-0.5 hover:shadow-md {% if dark %}text-white{% else %}border border-line/70 bg-white{% endif %}"
+   class="group flex min-w-0 flex-col justify-between rounded-3xl p-4 transition hover:-translate-y-0.5 hover:shadow-md sm:p-5 {% if dark %}text-white{% elif alert and value %}border border-line/70 bg-red-50 sm:bg-white{% elif tone == 'warm' or not tone and forloop.counter == 2 %}border border-line/70 bg-amber-50 sm:bg-white{% elif tone == 'cool' or not tone and forloop.counter == 3 %}border border-line/70 bg-teal-50 sm:bg-white{% elif tone == 'violet' or not tone and forloop.counter == 4 %}border border-line/70 bg-violet-50 sm:bg-white{% else %}border border-line/70 bg-white{% endif %}"
    {% if dark %}style="background-image: linear-gradient(135deg, #451221, #882C48)"{% endif %}>
-  <div class="flex items-start justify-between gap-3">
-    <p class="text-sm font-medium {% if dark %}text-white/80{% else %}text-muted{% endif %}">{{ label }}</p>
-    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border {% if dark %}border-white/30 bg-white/10{% else %}border-line{% endif %}" aria-hidden="true">
-      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-xs font-medium leading-snug sm:text-sm {% if dark %}text-white/80{% else %}text-muted{% endif %}">{{ label }}</p>
+    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border sm:h-9 sm:w-9 {% if dark %}border-white/30 bg-white/10{% else %}border-line bg-white/60{% endif %}" aria-hidden="true">
+      <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
     </span>
   </div>
-  <p class="mt-6 text-5xl font-bold tracking-tight {% if alert and value %}text-red-700{% endif %}">{{ value }}{% if unit %}<span class="text-2xl font-semibold opacity-60">{{ unit }}</span>{% endif %}</p>
-  <p class="mt-2 text-sm {% if dark %}text-white/70{% else %}text-muted{% endif %}">{{ caption }}</p>
+  <p class="mt-3 text-3xl font-bold tracking-tight sm:mt-6 sm:text-5xl {% if alert and value %}text-red-700{% endif %}">{{ value }}{% if unit %}<span class="text-base font-semibold opacity-60 sm:text-2xl">{{ unit }}</span>{% endif %}</p>
+  <p class="mt-1 line-clamp-2 text-xs sm:mt-2 sm:text-sm {% if dark %}text-white/70{% else %}text-muted{% endif %}">{{ caption }}</p>
 </a>

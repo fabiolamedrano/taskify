@@ -24,11 +24,11 @@
   </div>
 
   <!-- Resumen -->
-  <section aria-label="Resumen" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <section aria-label="Resumen" class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
     {% include 'core/_stat_card.html' with label='Pendientes' value=stats.todo href=mine_url|add:'?status=todo' caption='Tareas por hacer' dark=True %}
-    {% include 'core/_stat_card.html' with label='En curso' value=stats.doing href=mine_url|add:'?status=doing' caption='Tareas en progreso' %}
-    {% include 'core/_stat_card.html' with label='Vencen esta semana' value=stats.due_soon href=mine_url caption='En los próximos 7 días' %}
-    {% include 'core/_stat_card.html' with label='Vencidas' value=stats.overdue href=mine_url caption='Requieren atención' alert=True %}
+    {% include 'core/_stat_card.html' with label='En curso' value=stats.doing href=mine_url|add:'?status=doing' caption='Tareas en progreso' tone='warm' %}
+    {% include 'core/_stat_card.html' with label='Vencen esta semana' value=stats.due_soon href=mine_url caption='En los próximos 7 días' tone='cool' %}
+    {% include 'core/_stat_card.html' with label='Vencidas' value=stats.overdue href=mine_url caption='Requieren atención' alert=True tone='violet' %}
   </section>
 
   <div class="grid gap-5 xl:grid-cols-3">

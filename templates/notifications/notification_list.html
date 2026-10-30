@@ -22,7 +22,7 @@
   </div>
 
   <!-- Resumen -->
-  <section aria-label="Resumen" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <section aria-label="Resumen" class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
     {% for card in cards %}
       {% include 'core/_stat_card.html' with label=card.label value=card.value unit=card.unit caption=card.caption href=card.href dark=card.dark %}
     {% endfor %}
