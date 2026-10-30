@@ -1,0 +1,13 @@
+<a href="{% url url_name %}" {% if nav_section == name %}aria-current="page"{% endif %}
+   class="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-2xl px-1 py-1.5 text-[11px] font-medium transition {% if nav_section == name %}bg-white/10 text-white{% else %}text-white/55 hover:text-white{% endif %}">
+  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {% if icon == 'projects' %}
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/>
+    {% elif icon == 'tasks' %}
+      <path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/>
+    {% elif icon == 'time' %}
+      <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+    {% endif %}
+  </svg>
+  <span class="truncate">{{ label }}</span>
+</a>

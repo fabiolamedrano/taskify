@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block content %}
-<div class="flex min-h-screen w-full">
+<div class="flex min-h-screen w-full overflow-x-clip">
 
   <!-- Fondo oscuro del menú en móvil -->
   <div id="sidebar-overlay"
@@ -68,13 +68,9 @@
     <header class="sticky top-0 z-20 bg-surface/80 px-3 pt-3 backdrop-blur sm:px-4 lg:px-6">
       <div class="flex items-center justify-between gap-3 rounded-2xl border border-line/70 bg-white px-3 py-2.5 sm:px-4">
         <div class="flex min-w-0 items-center gap-3">
-          <button id="sidebar-toggle" type="button"
-                  aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"
-                  class="rounded-xl border border-line p-2 hover:bg-surface lg:hidden">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          <a href="{% url 'users:profile' %}" aria-label="Mi perfil" class="shrink-0 lg:hidden">
+            {% include 'includes/_avatar.html' with person=user size='h-9 w-9' text='text-xs' %}
+          </a>
           <h1 class="truncate text-lg font-bold sm:text-xl">{% block page_title %}{% endblock %}</h1>
         </div>
 
@@ -82,7 +78,8 @@
           <form method="get" action="{% url 'projects:list' %}" role="search" class="relative hidden md:block">
             <label for="global-search" class="sr-only">Buscar proyectos</label>
             <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input id="global-search" type="search" name="q" placeholder="Buscar proyectos..." value="{% if request.resolver_match.view_name == 'projects:list' %}{{ request.GET.q }}{% endif %}"
+            <input id="global-search" type="search" name="q" placeholder="Buscar proyectos..."
+                   value="{% if request.resolver_match.view_name == 'projects:list' %}{{ request.GET.q }}{% endif %}"
                    class="w-56 rounded-full border border-line bg-surface py-2 pl-9 pr-4 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-700/20 lg:w-64">
           </form>
 
@@ -100,11 +97,32 @@
       </div>
     </header>
 
-    <main class="flex-1 p-4 sm:p-6">
+    <main class="flex-1 px-4 pb-28 pt-4 sm:px-6 sm:pt-6 lg:pb-6">
       {% block page_content %}{% endblock %}
     </main>
   </div>
 </div>
+
+<!-- Barra de navegación inferior (solo móvil y tablet) -->
+<nav aria-label="Navegación móvil" class="fixed inset-x-0 bottom-0 z-20 px-3 pb-3 lg:hidden">
+  <div class="mx-auto flex max-w-md items-center rounded-3xl bg-ink px-2 py-2 text-white shadow-lg">
+    {% include 'layouts/_tab_link.html' with url_name='projects:list' name='projects' label='Proyectos' icon='projects' %}
+    {% include 'layouts/_tab_link.html' with url_name='tasks:mine' name='mine' label='Mis tareas' icon='tasks' %}
+
+    <a href="{% url 'dashboard' %}" aria-label="Inicio" {% if nav_section == 'dashboard' %}aria-current="page"{% endif %}
+       class="-mt-8 mx-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-700 text-white shadow-lg ring-4 ring-surface transition hover:bg-brand-600">
+      <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+    </a>
+
+    {% include 'layouts/_tab_link.html' with url_name='tasks:my_time' name='my_time' label='Tiempo' icon='time' %}
+
+    <button id="sidebar-toggle" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Abrir menú"
+            class="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-2xl px-1 py-1.5 text-[11px] font-medium transition {% if nav_section == 'teams' or nav_section == 'notifications' or nav_section == 'users' or nav_section == 'tags' or nav_section == 'profile' %}bg-white/10 text-white{% else %}text-white/55 hover:text-white{% endif %}">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+      <span>Más</span>
+    </button>
+  </div>
+</nav>
 
 <!-- Modal de confirmación reutilizable -->
 <dialog id="confirm-dialog" data-tone="default"

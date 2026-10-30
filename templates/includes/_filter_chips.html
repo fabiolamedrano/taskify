@@ -1,9 +1,10 @@
-<div>
+<div class="min-w-0 max-w-full">
   {% if label %}<p class="mb-1.5 text-xs font-medium text-muted">{{ label }}</p>{% endif %}
-  <div class="flex flex-wrap gap-2" role="group" aria-label="Filtrar por {% if label %}{{ label|lower }}{% else %}{{ aria }}{% endif %}">
+  <div class="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] max-sm:-mx-4 max-sm:px-4 md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden"
+       role="group" aria-label="Filtrar por {% if label %}{{ label|lower }}{% else %}{{ aria }}{% endif %}">
     {% for option in options %}
       <a href="{{ option.url }}" {% if option.active %}aria-current="true"{% endif %}
-         class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition {% if option.active %}bg-ink text-white{% else %}border border-line/70 bg-white hover:bg-surface{% endif %}">
+         class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition {% if option.active %}bg-ink text-white{% else %}border border-line/70 bg-white hover:bg-surface{% endif %}">
         {{ option.label }}
         {% if "count" in option %}
           <span class="rounded-full px-2 py-0.5 text-xs {% if option.active %}bg-white/20{% else %}bg-surface text-muted{% endif %}">{{ option.count }}</span>
