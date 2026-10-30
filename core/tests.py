@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 from datetime import timedelta
 from decimal import Decimal
 from io import StringIO
@@ -9,6 +12,7 @@ from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.views.defaults import server_error
+from django.conf import settings
 
 from core.factories import WorldMixin, make_task, make_user
 from projects.models import Project
@@ -179,3 +183,35 @@ class ErrorPagesTests(WorldMixin, TestCase):
         response = server_error(RequestFactory().get('/'))
         self.assertEqual(response.status_code, 500)
         self.assertIn('Algo salió mal'.encode(), response.content)
+
+class MobileNavigationBarTests(WorldMixin, TestCase):
+    def test_bottom_bar_has_its_links_and_a_single_menu_button(self):
+        self.client.force_login(self.member)
+        response = self.client.get(reverse('dashboard'))
+        self.assertContains(response, 'aria-label="Navegación móvil"')
+        for name in ('projects:list', 'tasks:mine', 'tasks:my_time'):
+            self.assertContains(response, f'href="{reverse(name)}"')
+        # Un id duplicado rompería el menú: el botón debe existir una sola vez
+        self.assertContains(response, 'id="sidebar-toggle"', count=1)
+
+    def test_every_main_page_renders_with_the_bar(self):
+        self.client.force_login(self.admin)
+        pages = [
+            reverse('projects:list'), reverse('tasks:mine'), reverse('tasks:my_time'),
+            reverse('teams:list'), reverse('notifications:list'), reverse('users:list'),
+        ]
+        for url in pages:
+            with self.subTest(url=url):
+                self.assertContains(self.client.get(url), 'Navegación móvil')
+
+class ScrollContainerTests(TestCase):
+    def test_table_scrollers_are_positioned(self):
+        """Un .sr-only dentro de una tabla desplazable necesita un contenedor «relative»;
+        si no, su posición estática ensancha toda la página en el móvil."""
+        pattern = re.compile(r'<div class="([^"]*overflow-x-auto[^"]*)">\s*<table')
+        checked = 0
+        for path in Path(settings.BASE_DIR, 'templates').rglob('*.html'):
+            for classes in pattern.findall(path.read_text(encoding='utf-8')):
+                checked += 1
+                self.assertIn('relative', classes.split(), f'{path.name}: falta "relative" en {classes!r}')
+        self.assertGreaterEqual(checked, 3)
